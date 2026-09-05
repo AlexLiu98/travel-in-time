@@ -18,6 +18,7 @@
     "马略卡岛": "Mallorca"
   };
   const CHINA_REGION_CODES = new Set(["CN", "TW", "HK", "MO"]);
+  const WORLD_MAP_BOUNDS = [[-85.05112878, -180], [85.05112878, 180]];
   const CHINA_MAP_BOUNDS = [[15.5, 71.5], [55.5, 137.5]];
   const els = Object.fromEntries([
     "countryCount", "countryProgress", "cityCount", "chinaCityCount", "worldTabMeta", "chinaTabMeta",
@@ -173,12 +174,20 @@
       els.mapFallback.hidden = false;
       return;
     }
-    map = L.map("map", { worldCopyJump: true, zoomControl: true, minZoom: 2, maxBoundsViscosity: 1 }).setView([28, 12], 2);
+    map = L.map("map", {
+      worldCopyJump: false,
+      zoomControl: true,
+      minZoom: 2,
+      maxBounds: WORLD_MAP_BOUNDS,
+      maxBoundsViscosity: 1
+    }).setView([28, 12], 2);
     map.createPane("mapBoundaryPane");
     map.getPane("mapBoundaryPane").style.zIndex = "230";
     map.getPane("mapBoundaryPane").style.pointerEvents = "none";
     baseTileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 18,
+      noWrap: true,
+      bounds: WORLD_MAP_BOUNDS,
       attribution: "&copy; OpenStreetMap contributors"
     }).addTo(map);
     markerLayer = L.layerGroup().addTo(map);
@@ -353,7 +362,7 @@
       map.setMaxBounds(CHINA_MAP_BOUNDS);
     } else {
       map.setMinZoom(2);
-      map.setMaxBounds(null);
+      map.setMaxBounds(WORLD_MAP_BOUNDS);
     }
   }
 
