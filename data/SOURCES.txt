@@ -1,0 +1,8 @@
+Boundary data sources
+
+- World countries: johan/world.geo.json, derived from Natural Earth public-domain data.
+  https://github.com/johan/world.geo.json
+- China provincial boundaries: Alibaba Cloud DataV geographic boundary service.
+  https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json
+- ISO alpha-2/alpha-3 mapping: country-data package (MIT License).
+  https://www.npmjs.com/package/country-data

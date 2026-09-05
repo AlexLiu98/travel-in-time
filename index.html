@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#08111f" />
+    <meta name="description" content="Travel in Time：在世界地图和中国地图上记录去过的国家与城市。" />
+    <title>Travel in Time</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="preconnect" href="https://tile.openstreetmap.org" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="preload" as="image" href="./travel-in-time-hero.webp" />
+    <link rel="stylesheet" href="./styles.css?v=17" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Travel in Time 首页">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <span>
+            <strong>Travel in Time</strong>
+            <small>PERSONAL TRAVEL ATLAS</small>
+          </span>
+        </a>
+        <div class="top-actions">
+          <span class="save-note" id="saveNote"><i></i> 游客模式 · 仅保存在本机</span>
+          <button class="icon-button" id="exportBtn" type="button" title="导出备份" aria-label="导出备份">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 17v3h14v-3" /></svg>
+          </button>
+          <button class="icon-button" id="importBtn" type="button" title="导入备份" aria-label="导入备份">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0 4 4m-4-4-4 4M5 18v2h14v-2" /></svg>
+          </button>
+          <input id="importFile" type="file" accept="application/json" hidden />
+        </div>
+      </header>
+
+      <main>
+        <section class="overview" aria-label="Travel in Time 旅行统计">
+          <img class="overview-media" src="./travel-in-time-hero.webp" alt="" />
+          <div class="overview-copy">
+            <p class="eyebrow">MY TRAVEL FOOTPRINT</p>
+            <h1>Travel in Time</h1>
+            <p>Every coordinate holds a story of somewhere I’ve truly been.</p>
+          </div>
+          <div class="stat-card country-stat">
+            <span>去过国家 / 地区</span>
+            <strong id="countryCount">0</strong>
+            <small><b id="countryProgress">0%</b> · 按 195 个国家统计</small>
+          </div>
+          <div class="stat-card city-stat">
+            <span>去过城市</span>
+            <strong id="cityCount">0</strong>
+            <small>其中中国城市 <b id="chinaCityCount">0</b> 个</small>
+          </div>
+        </section>
+
+        <nav class="view-tabs" aria-label="选择地图">
+          <button class="view-tab active" data-view="world" type="button">
+            <span class="tab-icon">◎</span> 世界地图
+            <small id="worldTabMeta">0 个国家 · 0 个城市</small>
+          </button>
+          <button class="view-tab" data-view="china" type="button">
+            <span class="tab-icon">⌖</span> 中国地图
+            <small id="chinaTabMeta">0 个城市</small>
+          </button>
+        </nav>
+
+        <section class="workspace">
+          <div class="map-card">
+            <div id="map" role="application" aria-label="可交互旅行地图"></div>
+            <div class="map-toolbar">
+              <span id="mapLabel">世界足迹</span>
+              <button id="fitBtn" type="button" aria-label="显示全部足迹">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5m13 5h5v-5" /></svg>
+                全部足迹
+              </button>
+            </div>
+            <div class="map-legend" aria-label="地图图例">
+              <span><i class="country-dot"></i> 国家</span>
+              <span><i class="city-dot"></i> 城市</span>
+            </div>
+            <div class="map-hint" id="mapHint">点击地图选点；放大可查看市县名称；再次点击黄色选点即可取消</div>
+            <div class="map-fallback" id="mapFallback" hidden>
+              <strong>地图暂时未加载</strong>
+              <span>仍可使用右侧搜索和记录功能。</span>
+            </div>
+          </div>
+
+          <aside class="side-panel">
+            <section class="add-card">
+              <div class="section-heading">
+                <div>
+                  <p class="eyebrow">ADD A PLACE</p>
+                  <h2 id="addTitle">添加世界足迹</h2>
+                </div>
+                <span class="heading-badge" id="viewBadge">WORLD</span>
+              </div>
+
+              <div class="field-group" id="countryGroup">
+                <label for="countrySelect">记录去过的国家 / 地区</label>
+                <div class="input-row">
+                  <select id="countrySelect" aria-label="选择国家或地区">
+                    <option value="">搜索或选择国家 / 地区</option>
+                  </select>
+                  <button class="primary-button compact" id="addCountryBtn" type="button">记录</button>
+                </div>
+              </div>
+
+              <div class="divider"><span>添加城市</span></div>
+
+              <div class="field-group">
+                <label for="cityInput">城市名称</label>
+                <div class="input-row">
+                  <input id="cityInput" type="search" placeholder="例如：Bonn、博洛尼亚、天津" autocomplete="off" />
+                  <button class="primary-button compact" id="searchCityBtn" type="button">搜索</button>
+                </div>
+              </div>
+              <div class="field-group" id="cityCountryGroup">
+                <label for="cityCountrySelect">所在国家 / 地区</label>
+                <select id="cityCountrySelect" aria-label="城市所在国家或地区">
+                  <option value="">可选，用于缩小搜索范围</option>
+                </select>
+              </div>
+
+              <div class="search-status" id="searchStatus" aria-live="polite"></div>
+              <div class="search-results" id="searchResults"></div>
+
+              <button class="secondary-button full" id="manualCityBtn" type="button">
+                找不到？按输入名称直接记录
+              </button>
+            </section>
+
+          </aside>
+
+          <section class="visited-card visited-card-wide">
+            <div class="section-heading compact-heading">
+              <div>
+                <p class="eyebrow">MY PLACES</p>
+                <h2 id="visitedTitle">我的世界足迹</h2>
+              </div>
+              <button class="text-button danger" id="clearBtn" type="button">清空</button>
+            </div>
+            <label class="filter-box">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+              <input id="filterInput" type="search" placeholder="筛选已记录地点" />
+            </label>
+            <div id="visitedList" class="visited-list"></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <dialog id="confirmDialog">
+      <form method="dialog">
+        <span class="dialog-icon">!</span>
+        <h2>清空当前所有记录？</h2>
+        <p>这会删除当前浏览器中的国家和城市足迹，且无法撤销。</p>
+        <div class="dialog-actions">
+          <button class="secondary-button" value="cancel">取消</button>
+          <button class="danger-button" id="confirmClearBtn" value="confirm">确认清空</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="./vendor/opencc-t2cn.js"></script>
+    <script src="./app.js?v=17"></script>
+  </body>
+</html>
