@@ -6,11 +6,9 @@
     <meta name="theme-color" content="#08111f" />
     <meta name="description" content="Travel in Time：在世界地图和中国地图上记录去过的国家与城市。" />
     <title>Travel in Time</title>
-    <link rel="preconnect" href="https://unpkg.com" />
-    <link rel="preconnect" href="https://tile.openstreetmap.org" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <link rel="stylesheet" href="./vendor/leaflet.css" />
     <link rel="preload" as="image" href="./travel-in-time-hero.webp" />
-    <link rel="stylesheet" href="./styles.css?v=17" />
+    <link rel="stylesheet" href="./styles.css?v=18" />
   </head>
   <body>
     <div class="app-shell">
@@ -125,9 +123,6 @@
               <div class="search-status" id="searchStatus" aria-live="polite"></div>
               <div class="search-results" id="searchResults"></div>
 
-              <button class="secondary-button full" id="manualCityBtn" type="button">
-                找不到？按输入名称直接记录
-              </button>
             </section>
 
           </aside>
@@ -163,8 +158,8 @@
       </form>
     </dialog>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="./vendor/leaflet.js"></script>
     <script src="./vendor/opencc-t2cn.js"></script>
-    <script src="./app.js?v=17"></script>
+    <script src="./app.js?v=18"></script>
   </body>
 </html>

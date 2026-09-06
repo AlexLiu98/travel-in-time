@@ -123,7 +123,7 @@ main { padding-top: 15px; }
 
 .workspace { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(340px, .78fr); grid-template-areas: "map side" "visited visited"; gap: 15px; align-items: start; }
 .map-card { grid-area: map; position: relative; height: calc(100vh - 315px); min-height: 500px; overflow: hidden; border-radius: 23px; border: 1px solid var(--line); background: #142438; box-shadow: var(--shadow); }
-#map { width: 100%; height: 100%; background: #142438; }
+#map { width: 100%; height: 100%; background: #b8d7df; }
 #map.china-only-map { background: #d8e9ee; }
 .china-admin-label { background: transparent; border: 0; }
 .china-admin-label span {
@@ -131,6 +131,17 @@ main { padding-top: 15px; }
   color: #0c4b5a; background: rgba(234, 250, 251, .78); box-shadow: 0 1px 5px rgba(18, 86, 99, .12);
   font-size: .72rem; font-weight: 800; line-height: 1.2; white-space: nowrap; pointer-events: none;
 }
+.world-country-label, .city-map-label { background: transparent; border: 0; }
+.world-country-label span, .city-map-label span {
+  position: absolute; transform: translate(-50%, -50%); white-space: nowrap; pointer-events: none;
+  text-shadow: 0 1px 3px rgba(2, 13, 24, .95); font-weight: 760;
+}
+.world-country-label span { color: rgba(224, 239, 248, .86); font-size: .66rem; }
+.city-map-label span {
+  color: #f5fbff; font-size: .64rem; padding: 1px 3px; border-radius: 4px;
+  background: rgba(8, 27, 44, .5);
+}
+.china-city-map-label span { color: #174d5b; background: rgba(237, 251, 252, .74); text-shadow: 0 1px 2px #fff; }
 .map-card::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), inset 0 -80px 100px rgba(7,17,31,.16); border-radius: inherit; z-index: 400; }
 .map-toolbar {
   position: absolute; z-index: 500; top: 15px; left: 54px; right: 15px; display: flex; align-items: center; justify-content: space-between; pointer-events: none;

@@ -6,3 +6,8 @@ Boundary data sources
   https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json
 - ISO alpha-2/alpha-3 mapping: country-data package (MIT License).
   https://www.npmjs.com/package/country-data
+- City search and map labels: GeoNames cities5000 dataset (CC BY 4.0).
+  https://download.geonames.org/export/dump/
+- Leaflet 1.9.4 is bundled locally (BSD 2-Clause License).
+  https://leafletjs.com/
+  See ../vendor/leaflet-LICENSE.txt

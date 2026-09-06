@@ -7,7 +7,7 @@
   const FALLBACK_NAMES = { CN: "中国", DE: "德国", IT: "意大利", FR: "法国", GB: "英国", US: "美国", XK: "科索沃" };
   const CITY_NAME_ALIASES = {
     AT: { wien: "维也纳", vienna: "维也纳", "维也纳州": "维也纳" },
-    IT: { pompei: "庞贝", pompeii: "庞贝", "蓬佩伊": "庞贝" },
+    IT: { pompei: "庞贝", pompeii: "庞贝", "蓬佩伊": "庞贝", roma: "罗马", rome: "罗马", "罗马市": "罗马" },
     PL: { zakopane: "扎科帕内", "札科帕内": "扎科帕内" }
   };
   const CITY_SEARCH_ALIASES = {
@@ -23,28 +23,29 @@
   const els = Object.fromEntries([
     "countryCount", "countryProgress", "cityCount", "chinaCityCount", "worldTabMeta", "chinaTabMeta",
     "mapLabel", "mapHint", "mapFallback", "countryGroup", "countrySelect", "addCountryBtn", "cityInput",
-    "searchCityBtn", "cityCountryGroup", "cityCountrySelect", "searchStatus", "searchResults", "manualCityBtn",
+    "searchCityBtn", "cityCountryGroup", "cityCountrySelect", "searchStatus", "searchResults",
     "addTitle", "viewBadge", "visitedTitle", "filterInput", "visitedList", "fitBtn", "exportBtn", "importBtn",
     "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote"
   ].map(id => [id, document.getElementById(id)]));
 
   let currentView = "world";
   let map = null;
-  let baseTileLayer = null;
-  let chinaTileLayer = null;
   let markerLayer = null;
   let worldBoundaryLayer = null;
   let chinaProvinceLayer = null;
   let chinaLabelLayer = null;
+  let worldLabelLayer = null;
+  let cityLabelLayer = null;
   let worldCountriesData = null;
   let chinaProvincesData = null;
   let countryCodeMap = {};
+  let localCities = [];
+  let localCityLoadPromise = null;
   let pendingMarker = null;
   let pendingLookupId = 0;
   let pendingMapCityName = "";
   let pendingMapCountryCode = "";
   let pendingPreviousCountryCode = "";
-  let lastRequestAt = 0;
   let toastTimer = null;
   let activeStorageKey = STORAGE_KEY;
 
@@ -59,6 +60,7 @@
   function toSimplified(value) {
     const text = String(value || "").trim();
     if (!text) return "";
+    if (!/[\u3400-\u9fff]/.test(text)) return text;
     try { return traditionalToSimplified(text); } catch { return text; }
   }
 
@@ -146,6 +148,26 @@
     return String(value || "").trim().toLocaleLowerCase("zh-CN").replace(/\s+/g, " ");
   }
 
+  function searchNormalized(value) {
+    return normalized(toSimplified(value))
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .replace(/[’'`-]/g, " ")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function rawSearchNormalized(value) {
+    return normalized(value)
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .replace(/[’'`-]/g, " ")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   function toast(message) {
     clearTimeout(toastTimer);
     els.toast.textContent = message;
@@ -184,17 +206,18 @@
     map.createPane("mapBoundaryPane");
     map.getPane("mapBoundaryPane").style.zIndex = "230";
     map.getPane("mapBoundaryPane").style.pointerEvents = "none";
-    baseTileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-      noWrap: true,
-      bounds: WORLD_MAP_BOUNDS,
-      attribution: "&copy; OpenStreetMap contributors"
-    }).addTo(map);
+    map.attributionControl.setPrefix(false);
+    map.attributionControl.addAttribution('城市数据 &copy; <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a>');
     markerLayer = L.layerGroup().addTo(map);
     map.on("click", handleMapClick);
+    map.on("zoomend moveend", refreshVisibleCityLabels);
+    map.on("zoomend", refreshWorldCountryLabels);
     applyMapScope();
     renderMarkers();
     loadMapBoundaryData();
+    const preloadCities = () => ensureLocalCities().catch(() => {});
+    if ("requestIdleCallback" in window) window.requestIdleCallback(preloadCities, { timeout: 1500 });
+    else setTimeout(preloadCities, 350);
   }
 
   async function loadMapBoundaryData() {
@@ -227,55 +250,6 @@
     if (changed) saveState();
   }
 
-  function createChinaTileLayer() {
-    const ChinaTiles = L.GridLayer.extend({
-      createTile(coords, done) {
-        const tile = L.DomUtil.create("canvas", "leaflet-tile");
-        const size = this.getTileSize();
-        tile.width = size.x;
-        tile.height = size.y;
-        tile.setAttribute("aria-hidden", "true");
-        const context = tile.getContext("2d");
-        const image = new Image();
-        const subdomain = "abc"[Math.abs(coords.x + coords.y) % 3];
-
-        image.onload = () => {
-          const tileOrigin = L.point(coords.x * size.x, coords.y * size.y);
-          const addRing = ring => {
-            ring.forEach(([lng, lat], index) => {
-              const point = this._map.project(L.latLng(lat, lng), coords.z).subtract(tileOrigin);
-              if (index === 0) context.moveTo(point.x, point.y);
-              else context.lineTo(point.x, point.y);
-            });
-            context.closePath();
-          };
-
-          context.beginPath();
-          chinaProvincesData.features.forEach(feature => {
-            const geometry = feature.geometry;
-            if (!geometry) return;
-            const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
-            polygons.forEach(polygon => polygon.forEach(addRing));
-          });
-          context.save();
-          context.clip("evenodd");
-          context.drawImage(image, 0, 0, size.x, size.y);
-          context.restore();
-          done(null, tile);
-        };
-        image.onerror = () => done(new Error("地图文字加载失败"), tile);
-        image.src = `https://${subdomain}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
-        return tile;
-      }
-    });
-
-    return new ChinaTiles({
-      minZoom: 3,
-      maxZoom: 18,
-      attribution: "&copy; OpenStreetMap contributors"
-    });
-  }
-
   function getProvinceLabel(name) {
     return String(name || "")
       .replace(/特别行政区$/, "")
@@ -306,23 +280,51 @@
     return labels;
   }
 
+  function createWorldCountryLabels() {
+    const labels = L.layerGroup();
+    const zoom = map.getZoom();
+    worldCountriesData.features.forEach(feature => {
+      const bounds = L.geoJSON(feature).getBounds();
+      if (!bounds.isValid()) return;
+      const span = Math.max(
+        bounds.getNorth() - bounds.getSouth(),
+        bounds.getEast() - bounds.getWest()
+      );
+      if ((zoom <= 2 && span < 5) || (zoom === 3 && span < 2)) return;
+      const alpha2 = Object.keys(countryCodeMap).find(code => countryCodeMap[code] === feature.id);
+      const name = alpha2 ? getCountryName(alpha2) : toSimplified(feature.properties?.name || "");
+      if (!name) return;
+      L.marker(bounds.getCenter(), {
+        interactive: false,
+        keyboard: false,
+        icon: L.divIcon({
+          className: "world-country-label",
+          html: `<span>${escapeHtml(name)}</span>`,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0]
+        })
+      }).addTo(labels);
+    });
+    return labels;
+  }
+
+  function refreshWorldCountryLabels() {
+    if (!map || currentView !== "world" || !worldCountriesData) return;
+    if (worldLabelLayer) map.removeLayer(worldLabelLayer);
+    worldLabelLayer = createWorldCountryLabels().addTo(map);
+  }
+
   function renderBoundaryLayers() {
     if (!map) return;
     map.getContainer().classList.toggle("china-only-map", currentView === "china");
-    [worldBoundaryLayer, chinaProvinceLayer, chinaLabelLayer].forEach(layer => {
+    [worldBoundaryLayer, chinaProvinceLayer, chinaLabelLayer, worldLabelLayer, cityLabelLayer].forEach(layer => {
       if (layer) map.removeLayer(layer);
     });
     worldBoundaryLayer = null;
     chinaProvinceLayer = null;
     chinaLabelLayer = null;
-
-    if (currentView === "china") {
-      if (baseTileLayer && map.hasLayer(baseTileLayer)) map.removeLayer(baseTileLayer);
-      if (chinaTileLayer && !map.hasLayer(chinaTileLayer)) chinaTileLayer.addTo(map);
-    } else if (baseTileLayer && !map.hasLayer(baseTileLayer)) {
-      baseTileLayer.addTo(map);
-    }
-    if (currentView === "world" && chinaTileLayer && map.hasLayer(chinaTileLayer)) map.removeLayer(chinaTileLayer);
+    worldLabelLayer = null;
+    cityLabelLayer = null;
     if (!worldCountriesData || !chinaProvincesData) return;
 
     if (currentView === "world") {
@@ -337,22 +339,22 @@
             color: highlighted ? "#50dedb" : "#8ba2b8",
             weight: highlighted ? 1.8 : 0.75,
             opacity: highlighted ? 1 : 0.72,
-            fillColor: highlighted ? "#35bfd0" : "transparent",
-            fillOpacity: highlighted ? 0.22 : 0
+            fillColor: highlighted ? "#35bfd0" : "#243b52",
+            fillOpacity: highlighted ? 0.38 : 0.82
           };
         }
       }).addTo(map);
+      worldLabelLayer = createWorldCountryLabels().addTo(map);
+      refreshVisibleCityLabels();
       return;
     }
-
-    if (!chinaTileLayer) chinaTileLayer = createChinaTileLayer();
-    if (!map.hasLayer(chinaTileLayer)) chinaTileLayer.addTo(map);
     chinaProvinceLayer = L.geoJSON(chinaProvincesData, {
       pane: "mapBoundaryPane",
       interactive: false,
-      style: { color: "#176f82", weight: 1.45, opacity: 1, fillColor: "#49d6d1", fillOpacity: 0.1 }
+      style: { color: "#176f82", weight: 1.55, opacity: 1, fillColor: "#8edfe0", fillOpacity: 0.92 }
     }).addTo(map);
     chinaLabelLayer = createChinaProvinceLabels().addTo(map);
+    refreshVisibleCityLabels();
   }
 
   function applyMapScope() {
@@ -400,7 +402,7 @@
       .filter(item => Number.isFinite(item.lat) && Number.isFinite(item.lng))
       .forEach(item => {
         const marker = L.marker([item.lat, item.lng], { icon: cityIcon(), zIndexOffset: 300 })
-          .bindPopup(`<div class="map-popup"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.region || item.countryName)}</small></div>`);
+          .bindPopup(`<div class="map-popup"><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(isChinaPlace(item) ? (item.region || item.countryName) : item.countryName)}</small></div>`);
         if (showChinaOnly) {
           marker.bindTooltip(escapeHtml(item.name), {
             permanent: true,
@@ -643,23 +645,8 @@
     if (!Number.isFinite(item.lat)) {
       hydrateCountryCoordinatesFromBoundaries();
       if (Number.isFinite(item.lat) && Number.isFinite(item.lng)) renderMarkers();
-      else hydrateCountryLocation(item);
     }
     return true;
-  }
-
-  async function hydrateCountryLocation(item) {
-    try {
-      const response = await fetch(`https://restcountries.com/v3.1/alpha/${encodeURIComponent(item.code)}?fields=latlng`);
-      if (!response.ok) return;
-      const data = await response.json();
-      if (Array.isArray(data.latlng) && data.latlng.length === 2) {
-        item.lat = Number(data.latlng[0]);
-        item.lng = Number(data.latlng[1]);
-        saveState();
-        renderMarkers();
-      }
-    } catch { /* a coordinate is optional */ }
   }
 
   function addCity(candidate, options = {}) {
@@ -698,51 +685,98 @@
     return true;
   }
 
-  async function respectRateLimit() {
-    const wait = Math.max(0, 1100 - (Date.now() - lastRequestAt));
-    if (wait) await new Promise(resolve => setTimeout(resolve, wait));
-    lastRequestAt = Date.now();
-  }
-
-  function getSearchResultPriority(result) {
-    const priorities = {
-      city: 100, town: 95, municipality: 90, village: 85, borough: 80,
-      island: 70, county: 35, state: 25, administrative: 20, country: 10
-    };
-    return priorities[result.addresstype] ?? (result.category === "place" ? 50 : 0);
-  }
-
-  function addressToCandidate(result, requestedName = "") {
-    const address = result.address || {};
-    const details = result.namedetails || {};
-    const originalCountryCode = String(address.country_code || "").toUpperCase();
-    const countryCode = normalizeCountryCode(originalCountryCode);
-    const localizedName = details["name:zh-Hans"] || details["name:zh-CN"] || details["name:zh"]
-      || address.city || address.town || address.village || address.municipality
-      || address.city_district || result.name || String(result.display_name || "").split(",")[0];
-    let name = localizeCityName(localizedName, originalCountryCode);
-    const requested = toSimplified(requestedName);
-    const cityLike = ["city", "town", "municipality", "village", "borough"].includes(result.addresstype);
-    if (cityLike && /[\u3400-\u9fff]/.test(requested)) {
-      const requestedKey = normalized(requested);
-      const nameKey = normalized(name);
-      if (["州", "省", "市", "地区", "大区", "行政区"].some(suffix => nameKey === `${requestedKey}${suffix}`)) {
-        name = requested;
-      }
+  async function ensureLocalCities() {
+    if (localCities.length) return localCities;
+    if (!localCityLoadPromise) {
+      localCityLoadPromise = fetch("./data/cities-manifest.json")
+        .then(async response => {
+          if (!response.ok) throw new Error("local city manifest unavailable");
+          if (!("DecompressionStream" in window)) throw new Error("this browser cannot read the local city data");
+          const manifest = await response.json();
+          const chunks = await Promise.all((manifest.files || []).map(async filename => {
+            const chunkResponse = await fetch(`./data/${filename}`);
+            if (!chunkResponse.ok || !chunkResponse.body) throw new Error("local city data unavailable");
+            const stream = chunkResponse.body.pipeThrough(new DecompressionStream("gzip"));
+            return new Response(stream).json();
+          }));
+          return chunks.flat();
+        })
+        .then(rows => {
+          localCities = rows.map(row => {
+            const originalCountryCode = String(row[2] || "").toUpperCase();
+            const countryCode = normalizeCountryCode(originalCountryCode);
+            const name = localizeCityName(toSimplified(row[0] || row[1]), originalCountryCode);
+            const searchKeys = [...new Set([name, row[1], ...(row[8] || [])]
+              .map(rawSearchNormalized)
+              .filter(Boolean))];
+            return {
+              name,
+              originalName: row[1] || name,
+              countryCode,
+              countryName: getCountryName(countryCode),
+              region: toSimplified(row[3] || ""),
+              lat: Number(row[4]),
+              lng: Number(row[5]),
+              population: Number(row[6] || 0),
+              featureCode: row[7] || "",
+              searchKeys,
+              searchText: searchKeys.join("|")
+            };
+          }).filter(city => city.name && Number.isFinite(city.lat) && Number.isFinite(city.lng));
+          refreshVisibleCityLabels();
+          return localCities;
+        })
+        .catch(error => {
+          localCityLoadPromise = null;
+          throw error;
+        });
     }
-    const countryName = countryCode ? getCountryName(countryCode) : toSimplified(address.country);
-    const region = ({ TW: "台湾省", HK: "香港特别行政区", MO: "澳门特别行政区" }[originalCountryCode])
-      || toSimplified(address.state || address.province || address.region || address.county || "");
-    return {
-      name,
-      countryCode,
-      countryName,
-      region,
-      lat: Number(result.lat),
-      lng: Number(result.lon),
-      detail: [name, region, countryName].filter(Boolean).join(" · "),
-      searchPriority: getSearchResultPriority(result)
-    };
+    return localCityLoadPromise;
+  }
+
+  function citySearchScore(city, keys) {
+    let score = -1;
+    keys.forEach(key => {
+      if (city.searchKeys.includes(key)) score = Math.max(score, 1000);
+      else if (city.searchKeys.some(value => value.startsWith(key))) score = Math.max(score, 700);
+      else if (city.searchText.includes(key)) score = Math.max(score, 400);
+    });
+    if (score < 0) return score;
+    if (["PPLC", "PPLA", "PPLA2"].includes(city.featureCode)) score += 80;
+    return score + Math.log10(Math.max(1, city.population)) * 12;
+  }
+
+  function refreshVisibleCityLabels() {
+    if (!map || !localCities.length || !worldCountriesData) return;
+    if (cityLabelLayer) map.removeLayer(cityLabelLayer);
+    cityLabelLayer = L.layerGroup();
+    const zoom = map.getZoom();
+    const bounds = map.getBounds().pad(.08);
+    const china = currentView === "china";
+    const populationFloor = china
+      ? (zoom <= 3 ? 1500000 : zoom === 4 ? 600000 : zoom === 5 ? 180000 : zoom === 6 ? 60000 : 5000)
+      : (zoom <= 2 ? 2500000 : zoom === 3 ? 900000 : zoom === 4 ? 300000 : zoom === 5 ? 90000 : 5000);
+    const maxLabels = zoom <= 3 ? 65 : zoom <= 5 ? 95 : 130;
+    const visible = localCities
+      .filter(city => (!china || isChinaPlace(city)) && bounds.contains([city.lat, city.lng]))
+      .filter(city => city.population >= populationFloor || ["PPLC", "PPLA"].includes(city.featureCode))
+      .filter(city => zoom >= 8 || city.featureCode !== "PPLX")
+      .sort((a, b) => b.population - a.population)
+      .slice(0, maxLabels);
+
+    visible.forEach(city => {
+      L.marker([city.lat, city.lng], {
+        interactive: false,
+        keyboard: false,
+        icon: L.divIcon({
+          className: `city-map-label${china ? " china-city-map-label" : ""}`,
+          html: `<span>${escapeHtml(city.name)}</span>`,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0]
+        })
+      }).addTo(cityLabelLayer);
+    });
+    cityLabelLayer.addTo(map);
   }
 
   async function searchCities() {
@@ -753,37 +787,30 @@
       return;
     }
     clearPendingMapSelection({ clearInput: false });
-    const countryCode = currentView === "china" ? "CN,TW,HK,MO" : els.cityCountrySelect.value;
+    const countryCode = currentView === "china" ? "CN" : els.cityCountrySelect.value;
     els.searchCityBtn.disabled = true;
     els.searchStatus.textContent = "正在查找地点…";
     els.searchResults.replaceChildren();
     try {
-      await respectRateLimit();
-      const lookupQuery = getCitySearchQuery(query);
-      const params = new URLSearchParams({
-        format: "jsonv2", q: lookupQuery, addressdetails: "1", namedetails: "1", limit: "10",
-        "accept-language": "zh-CN,zh-Hans;q=0.9,zh;q=0.8,en;q=0.4"
-      });
-      if (countryCode) params.set("countrycodes", countryCode.toLowerCase());
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params}`);
-      if (!response.ok) throw new Error("search unavailable");
-      const raw = await response.json();
-      const seen = new Set();
-      const candidates = raw
-        .map(result => addressToCandidate(result, query))
-        .filter(item => item.name && Number.isFinite(item.lat) && Number.isFinite(item.lng))
-        .sort((a, b) => b.searchPriority - a.searchPriority)
-        .filter(item => {
-          const key = `${normalized(item.name)}|${item.countryCode}|${normalized(item.region)}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
+      els.searchStatus.textContent = "正在读取本地城市资料…";
+      const cities = await ensureLocalCities();
+      const keys = [...new Set([query, getCitySearchQuery(query)].map(searchNormalized).filter(Boolean))];
+      const candidates = cities
+        .filter(item => !countryCode || item.countryCode === normalizeCountryCode(countryCode))
+        .map(item => ({ item, score: citySearchScore(item, keys) }))
+        .filter(result => result.score >= 0)
+        .sort((a, b) => b.score - a.score)
+        .map(result => ({
+          ...result.item,
+          detail: candidateDetail(result.item)
+        }))
         .slice(0, 7);
       renderSearchResults(candidates);
-      els.searchStatus.textContent = candidates.length ? `找到 ${candidates.length} 个可能地点，请选择正确的一项` : "没有找到匹配地点，可以按输入名称直接记录。";
+      els.searchStatus.textContent = candidates.length
+        ? `找到 ${candidates.length} 个可能地点，请选择正确的一项`
+        : "本地城市资料中没有找到，请尝试英文名或先选择国家。";
     } catch {
-      els.searchStatus.textContent = "在线地图搜索暂时不可用，仍可直接记录输入的名称。";
+      els.searchStatus.textContent = "本地城市资料加载失败，请刷新页面后重试。";
     } finally {
       els.searchCityBtn.disabled = false;
     }
@@ -807,6 +834,10 @@
       button.addEventListener("click", () => addCity(candidate));
       els.searchResults.appendChild(button);
     });
+  }
+
+  function candidateDetail(item) {
+    return [item.name, isChinaPlace(item) ? item.region : "", item.countryName].filter(Boolean).join(" · ");
   }
 
   function clearPendingMapSelection(options = {}) {
@@ -837,19 +868,15 @@
     clearPendingMapSelection(options);
   }
 
-  function addManualCity() {
-    const name = els.cityInput.value.trim();
-    const countryCode = currentView === "china" ? "CN" : els.cityCountrySelect.value;
-    if (!name) {
-      toast("请先输入城市名称");
-      return;
-    }
-    if (!countryCode) {
-      toast("直接记录时，请选择城市所在国家 / 地区");
-      els.cityCountrySelect.focus();
-      return;
-    }
-    addCity({ name, countryCode, countryName: getCountryName(countryCode), region: "手动记录" });
+  function distanceKm(aLat, aLng, bLat, bLng) {
+    const radians = value => value * Math.PI / 180;
+    const dLat = radians(bLat - aLat);
+    const dLng = radians(bLng - aLng);
+    const sinLat = Math.sin(dLat / 2);
+    const sinLng = Math.sin(dLng / 2);
+    const value = sinLat * sinLat
+      + Math.cos(radians(aLat)) * Math.cos(radians(bLat)) * sinLng * sinLng;
+    return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   }
 
   async function handleMapClick(event) {
@@ -869,31 +896,32 @@
       clearPendingMapSelection({ clearInput: true, announce: true });
     });
     try {
-      await respectRateLimit();
+      const cities = await ensureLocalCities();
       if (lookupId !== pendingLookupId || !pendingMarker) return;
-      const params = new URLSearchParams({
-        format: "jsonv2", lat: String(event.latlng.lat), lon: String(event.latlng.lng),
-        addressdetails: "1", namedetails: "1", zoom: "12",
-        "accept-language": "zh-CN,zh-Hans;q=0.9,zh;q=0.8,en;q=0.4"
+      const available = currentView === "china" ? cities.filter(isChinaPlace) : cities;
+      let candidate = null;
+      let nearestDistance = Infinity;
+      available.forEach(city => {
+        const distance = distanceKm(event.latlng.lat, event.latlng.lng, city.lat, city.lng);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          candidate = city;
+        }
       });
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`);
-      if (!response.ok) throw new Error("reverse unavailable");
-      const result = await response.json();
-      if (lookupId !== pendingLookupId || !pendingMarker) return;
-      const candidate = addressToCandidate(result);
-      if (currentView === "china" && !isChinaPlace(candidate)) {
-        els.searchStatus.textContent = "这里不在中国地图范围内，请切换到世界地图记录。";
+      const maxDistance = map.getZoom() >= 8 ? 45 : map.getZoom() >= 5 ? 160 : 500;
+      if (!candidate || nearestDistance > maxDistance) {
+        els.searchStatus.textContent = "附近没有匹配到城市，请在右侧输入城市名称搜索。";
         return;
       }
       pendingMapCityName = candidate.name;
       pendingMapCountryCode = candidate.countryCode;
       els.cityInput.value = candidate.name;
       if (currentView === "world" && candidate.countryCode) els.cityCountrySelect.value = candidate.countryCode;
-      renderSearchResults([candidate]);
-      els.searchStatus.textContent = "已识别这个位置；点击黄色选点可取消。";
+      renderSearchResults([{ ...candidate, detail: candidateDetail(candidate) }]);
+      els.searchStatus.textContent = `已匹配附近城市（约 ${Math.round(nearestDistance)} 公里）；点击黄色选点可取消。`;
     } catch {
       if (lookupId !== pendingLookupId) return;
-      els.searchStatus.textContent = "暂时无法识别这个位置，请在右侧输入城市名称。";
+      els.searchStatus.textContent = "本地城市资料加载失败，请刷新页面后重试。";
     }
   }
 
@@ -974,7 +1002,6 @@
     els.cityInput.addEventListener("input", () => {
       if (pendingMarker) clearPendingMapSelection({ clearInput: false });
     });
-    els.manualCityBtn.addEventListener("click", addManualCity);
     els.filterInput.addEventListener("input", renderVisitedList);
     els.fitBtn.addEventListener("click", fitFootprints);
     els.exportBtn.addEventListener("click", exportData);
