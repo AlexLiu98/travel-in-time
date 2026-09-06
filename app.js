@@ -30,12 +30,12 @@
 
   let currentView = "world";
   let map = null;
+  let baseTileLayer = null;
+  let chinaTileLayer = null;
   let markerLayer = null;
   let worldBoundaryLayer = null;
   let chinaProvinceLayer = null;
   let chinaLabelLayer = null;
-  let worldLabelLayer = null;
-  let cityLabelLayer = null;
   let worldCountriesData = null;
   let chinaProvincesData = null;
   let countryCodeMap = {};
@@ -208,16 +208,17 @@
     map.getPane("mapBoundaryPane").style.pointerEvents = "none";
     map.attributionControl.setPrefix(false);
     map.attributionControl.addAttribution('城市数据 &copy; <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a>');
+    baseTileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      noWrap: true,
+      bounds: WORLD_MAP_BOUNDS,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
     markerLayer = L.layerGroup().addTo(map);
     map.on("click", handleMapClick);
-    map.on("zoomend moveend", refreshVisibleCityLabels);
-    map.on("zoomend", refreshWorldCountryLabels);
     applyMapScope();
     renderMarkers();
     loadMapBoundaryData();
-    const preloadCities = () => ensureLocalCities().catch(() => {});
-    if ("requestIdleCallback" in window) window.requestIdleCallback(preloadCities, { timeout: 1500 });
-    else setTimeout(preloadCities, 350);
   }
 
   async function loadMapBoundaryData() {
@@ -250,6 +251,55 @@
     if (changed) saveState();
   }
 
+  function createChinaTileLayer() {
+    const ChinaTiles = L.GridLayer.extend({
+      createTile(coords, done) {
+        const tile = L.DomUtil.create("canvas", "leaflet-tile");
+        const size = this.getTileSize();
+        tile.width = size.x;
+        tile.height = size.y;
+        tile.setAttribute("aria-hidden", "true");
+        const context = tile.getContext("2d");
+        const image = new Image();
+        const subdomain = "abc"[Math.abs(coords.x + coords.y) % 3];
+
+        image.onload = () => {
+          const tileOrigin = L.point(coords.x * size.x, coords.y * size.y);
+          const addRing = ring => {
+            ring.forEach(([lng, lat], index) => {
+              const point = this._map.project(L.latLng(lat, lng), coords.z).subtract(tileOrigin);
+              if (index === 0) context.moveTo(point.x, point.y);
+              else context.lineTo(point.x, point.y);
+            });
+            context.closePath();
+          };
+
+          context.beginPath();
+          chinaProvincesData.features.forEach(feature => {
+            const geometry = feature.geometry;
+            if (!geometry) return;
+            const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+            polygons.forEach(polygon => polygon.forEach(addRing));
+          });
+          context.save();
+          context.clip("evenodd");
+          context.drawImage(image, 0, 0, size.x, size.y);
+          context.restore();
+          done(null, tile);
+        };
+        image.onerror = () => done(new Error("地图文字加载失败"), tile);
+        image.src = `https://${subdomain}.tile.openstreetmap.org/${coords.z}/${coords.x}/${coords.y}.png`;
+        return tile;
+      }
+    });
+
+    return new ChinaTiles({
+      minZoom: 3,
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap contributors"
+    });
+  }
+
   function getProvinceLabel(name) {
     return String(name || "")
       .replace(/特别行政区$/, "")
@@ -280,51 +330,23 @@
     return labels;
   }
 
-  function createWorldCountryLabels() {
-    const labels = L.layerGroup();
-    const zoom = map.getZoom();
-    worldCountriesData.features.forEach(feature => {
-      const bounds = L.geoJSON(feature).getBounds();
-      if (!bounds.isValid()) return;
-      const span = Math.max(
-        bounds.getNorth() - bounds.getSouth(),
-        bounds.getEast() - bounds.getWest()
-      );
-      if ((zoom <= 2 && span < 5) || (zoom === 3 && span < 2)) return;
-      const alpha2 = Object.keys(countryCodeMap).find(code => countryCodeMap[code] === feature.id);
-      const name = alpha2 ? getCountryName(alpha2) : toSimplified(feature.properties?.name || "");
-      if (!name) return;
-      L.marker(bounds.getCenter(), {
-        interactive: false,
-        keyboard: false,
-        icon: L.divIcon({
-          className: "world-country-label",
-          html: `<span>${escapeHtml(name)}</span>`,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0]
-        })
-      }).addTo(labels);
-    });
-    return labels;
-  }
-
-  function refreshWorldCountryLabels() {
-    if (!map || currentView !== "world" || !worldCountriesData) return;
-    if (worldLabelLayer) map.removeLayer(worldLabelLayer);
-    worldLabelLayer = createWorldCountryLabels().addTo(map);
-  }
-
   function renderBoundaryLayers() {
     if (!map) return;
     map.getContainer().classList.toggle("china-only-map", currentView === "china");
-    [worldBoundaryLayer, chinaProvinceLayer, chinaLabelLayer, worldLabelLayer, cityLabelLayer].forEach(layer => {
+    [worldBoundaryLayer, chinaProvinceLayer, chinaLabelLayer].forEach(layer => {
       if (layer) map.removeLayer(layer);
     });
     worldBoundaryLayer = null;
     chinaProvinceLayer = null;
     chinaLabelLayer = null;
-    worldLabelLayer = null;
-    cityLabelLayer = null;
+
+    if (currentView === "china") {
+      if (baseTileLayer && map.hasLayer(baseTileLayer)) map.removeLayer(baseTileLayer);
+      if (chinaTileLayer && !map.hasLayer(chinaTileLayer)) chinaTileLayer.addTo(map);
+    } else if (baseTileLayer && !map.hasLayer(baseTileLayer)) {
+      baseTileLayer.addTo(map);
+    }
+    if (currentView === "world" && chinaTileLayer && map.hasLayer(chinaTileLayer)) map.removeLayer(chinaTileLayer);
     if (!worldCountriesData || !chinaProvincesData) return;
 
     if (currentView === "world") {
@@ -339,22 +361,21 @@
             color: highlighted ? "#50dedb" : "#8ba2b8",
             weight: highlighted ? 1.8 : 0.75,
             opacity: highlighted ? 1 : 0.72,
-            fillColor: highlighted ? "#35bfd0" : "#243b52",
-            fillOpacity: highlighted ? 0.38 : 0.82
+            fillColor: highlighted ? "#35bfd0" : "transparent",
+            fillOpacity: highlighted ? 0.22 : 0
           };
         }
       }).addTo(map);
-      worldLabelLayer = createWorldCountryLabels().addTo(map);
-      refreshVisibleCityLabels();
       return;
     }
+    if (!chinaTileLayer) chinaTileLayer = createChinaTileLayer();
+    if (!map.hasLayer(chinaTileLayer)) chinaTileLayer.addTo(map);
     chinaProvinceLayer = L.geoJSON(chinaProvincesData, {
       pane: "mapBoundaryPane",
       interactive: false,
-      style: { color: "#176f82", weight: 1.55, opacity: 1, fillColor: "#8edfe0", fillOpacity: 0.92 }
+      style: { color: "#176f82", weight: 1.45, opacity: 1, fillColor: "#49d6d1", fillOpacity: 0.1 }
     }).addTo(map);
     chinaLabelLayer = createChinaProvinceLabels().addTo(map);
-    refreshVisibleCityLabels();
   }
 
   function applyMapScope() {
@@ -723,7 +744,6 @@
               searchText: searchKeys.join("|")
             };
           }).filter(city => city.name && Number.isFinite(city.lat) && Number.isFinite(city.lng));
-          refreshVisibleCityLabels();
           return localCities;
         })
         .catch(error => {
@@ -744,39 +764,6 @@
     if (score < 0) return score;
     if (["PPLC", "PPLA", "PPLA2"].includes(city.featureCode)) score += 80;
     return score + Math.log10(Math.max(1, city.population)) * 12;
-  }
-
-  function refreshVisibleCityLabels() {
-    if (!map || !localCities.length || !worldCountriesData) return;
-    if (cityLabelLayer) map.removeLayer(cityLabelLayer);
-    cityLabelLayer = L.layerGroup();
-    const zoom = map.getZoom();
-    const bounds = map.getBounds().pad(.08);
-    const china = currentView === "china";
-    const populationFloor = china
-      ? (zoom <= 3 ? 1500000 : zoom === 4 ? 600000 : zoom === 5 ? 180000 : zoom === 6 ? 60000 : 5000)
-      : (zoom <= 2 ? 2500000 : zoom === 3 ? 900000 : zoom === 4 ? 300000 : zoom === 5 ? 90000 : 5000);
-    const maxLabels = zoom <= 3 ? 65 : zoom <= 5 ? 95 : 130;
-    const visible = localCities
-      .filter(city => (!china || isChinaPlace(city)) && bounds.contains([city.lat, city.lng]))
-      .filter(city => city.population >= populationFloor || ["PPLC", "PPLA"].includes(city.featureCode))
-      .filter(city => zoom >= 8 || city.featureCode !== "PPLX")
-      .sort((a, b) => b.population - a.population)
-      .slice(0, maxLabels);
-
-    visible.forEach(city => {
-      L.marker([city.lat, city.lng], {
-        interactive: false,
-        keyboard: false,
-        icon: L.divIcon({
-          className: `city-map-label${china ? " china-city-map-label" : ""}`,
-          html: `<span>${escapeHtml(city.name)}</span>`,
-          iconSize: [0, 0],
-          iconAnchor: [0, 0]
-        })
-      }).addTo(cityLabelLayer);
-    });
-    cityLabelLayer.addTo(map);
   }
 
   async function searchCities() {
