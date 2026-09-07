@@ -8,7 +8,7 @@
     <title>Travel in Time</title>
     <link rel="stylesheet" href="./vendor/leaflet.css" />
     <link rel="preload" as="image" href="./travel-in-time-hero.webp" />
-    <link rel="stylesheet" href="./styles.css?v=23" />
+    <link rel="stylesheet" href="./styles.css?v=24" />
   </head>
   <body>
     <div class="app-shell">
@@ -50,6 +50,21 @@
             <strong id="cityCount">0</strong>
             <small>其中中国城市 <b id="chinaCityCount">0</b> 个</small>
           </div>
+          <section class="extreme-strip" aria-label="足迹方向罗盘">
+            <button class="extreme-card" data-extreme="north" type="button" disabled>
+              <span class="extreme-direction">N</span><small>最北足迹</small><strong>等待抵达</strong><em>—</em>
+            </button>
+            <button class="extreme-card" data-extreme="south" type="button" disabled>
+              <span class="extreme-direction">S</span><small>最南足迹</small><strong>等待抵达</strong><em>—</em>
+            </button>
+            <button class="extreme-card" data-extreme="east" type="button" disabled>
+              <span class="extreme-direction">E</span><small>最东足迹</small><strong>等待抵达</strong><em>—</em>
+            </button>
+            <button class="extreme-card" data-extreme="west" type="button" disabled>
+              <span class="extreme-direction">W</span><small>最西足迹</small><strong>等待抵达</strong><em>—</em>
+            </button>
+            <span class="compass-core" aria-hidden="true"><i></i></span>
+          </section>
         </section>
 
         <nav class="view-tabs" aria-label="选择地图">
@@ -63,20 +78,6 @@
               <small id="chinaTabMeta">0 个城市</small>
             </button>
           </div>
-          <section class="extreme-strip" aria-label="足迹方向之最">
-            <button class="extreme-card" data-extreme="north" type="button" disabled>
-              <span class="extreme-direction">N</span><small>最北足迹</small><strong>等待抵达</strong><em>—</em>
-            </button>
-            <button class="extreme-card" data-extreme="south" type="button" disabled>
-              <span class="extreme-direction">S</span><small>最南足迹</small><strong>等待抵达</strong><em>—</em>
-            </button>
-            <button class="extreme-card" data-extreme="east" type="button" disabled>
-              <span class="extreme-direction">E</span><small>最东足迹</small><strong>等待抵达</strong><em>—</em>
-            </button>
-            <button class="extreme-card" data-extreme="west" type="button" disabled>
-              <span class="extreme-direction">W</span><small>最西足迹</small><strong>等待抵达</strong><em>—</em>
-            </button>
-          </section>
         </nav>
 
         <section class="workspace">
