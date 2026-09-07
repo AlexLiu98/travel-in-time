@@ -7,7 +7,13 @@
   const FALLBACK_NAMES = { CN: "中国", DE: "德国", IT: "意大利", FR: "法国", GB: "英国", US: "美国", XK: "科索沃" };
   const CITY_NAME_ALIASES = {
     AT: { wien: "维也纳", vienna: "维也纳", "维也纳州": "维也纳" },
-    DE: { "brühl": "布吕尔", bruehl: "布吕尔" },
+    DE: {
+      "brühl": "布吕尔",
+      bruehl: "布吕尔",
+      königswinter: "柯尼希斯温特",
+      koenigswinter: "柯尼希斯温特",
+      "克尼格斯温特尔": "柯尼希斯温特"
+    },
     IT: { pompei: "庞贝", pompeii: "庞贝", "蓬佩伊": "庞贝", roma: "罗马", rome: "罗马", "罗马市": "罗马" },
     PL: { zakopane: "扎科帕内", "札科帕内": "扎科帕内" }
   };
@@ -36,7 +42,8 @@
     "扎科帕内": "Zakopane",
     "庞贝": "Pompei",
     "马略卡": "Mallorca",
-    "马略卡岛": "Mallorca"
+    "马略卡岛": "Mallorca",
+    "柯尼希斯温特": "Königswinter"
   };
   const CHINA_REGION_CODES = new Set(["CN", "TW", "HK", "MO"]);
   const WORLD_MAP_BOUNDS = [[-85.05112878, -180], [85.05112878, 180]];
@@ -142,7 +149,7 @@
           countryName: countryCode ? getCountryName(countryCode) : toSimplified(item.countryName),
           region: CHINA_REGION_CODES.has(originalCode) && originalCode !== "CN"
             ? ({ TW: "台湾省", HK: "香港特别行政区", MO: "澳门特别行政区" }[originalCode])
-            : toSimplified(item.region)
+            : localizeRegionName(item.region, originalCode)
         };
       })
     };
