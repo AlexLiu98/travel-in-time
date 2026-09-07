@@ -1064,6 +1064,33 @@
     }
   }
 
+  function bindCompassMotion() {
+    const overview = document.querySelector(".overview");
+    const compass = document.querySelector(".compass-core");
+    if (!overview || !compass || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let animationFrame = 0;
+    let settleTimer = 0;
+    const pointNeedle = event => {
+      if (event.pointerType === "touch") return;
+      const rect = compass.getBoundingClientRect();
+      const dx = event.clientX - (rect.left + rect.width / 2);
+      const dy = event.clientY - (rect.top + rect.height / 2);
+      const angle = Math.atan2(dx, -dy) * 180 / Math.PI;
+      clearTimeout(settleTimer);
+      compass.classList.remove("is-settling");
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => compass.style.setProperty("--needle-angle", `${angle}deg`));
+    };
+    overview.addEventListener("pointermove", pointNeedle);
+    overview.addEventListener("pointerleave", () => {
+      cancelAnimationFrame(animationFrame);
+      compass.classList.add("is-settling");
+      compass.style.setProperty("--needle-angle", "0deg");
+      settleTimer = window.setTimeout(() => compass.classList.remove("is-settling"), 700);
+    });
+  }
+
   function bindEvents() {
     document.querySelectorAll(".view-tab").forEach(tab => tab.addEventListener("click", () => switchView(tab.dataset.view)));
     document.querySelectorAll(".extreme-card").forEach(card => card.addEventListener("click", () => focusExtremeCity(card.dataset.extreme)));
@@ -1089,6 +1116,7 @@
       toast("所有足迹已清空");
     });
     window.addEventListener("resize", () => map?.invalidateSize());
+    bindCompassMotion();
   }
 
   populateCountries();
