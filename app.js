@@ -7,8 +7,29 @@
   const FALLBACK_NAMES = { CN: "中国", DE: "德国", IT: "意大利", FR: "法国", GB: "英国", US: "美国", XK: "科索沃" };
   const CITY_NAME_ALIASES = {
     AT: { wien: "维也纳", vienna: "维也纳", "维也纳州": "维也纳" },
+    DE: { "brühl": "布吕尔", bruehl: "布吕尔" },
     IT: { pompei: "庞贝", pompeii: "庞贝", "蓬佩伊": "庞贝", roma: "罗马", rome: "罗马", "罗马市": "罗马" },
     PL: { zakopane: "扎科帕内", "札科帕内": "扎科帕内" }
+  };
+  const REGION_NAME_ALIASES = {
+    DE: {
+      "Baden-Wurttemberg": "巴登-符腾堡州",
+      Bavaria: "巴伐利亚州",
+      Berlin: "柏林",
+      Brandenburg: "勃兰登堡州",
+      Bremen: "不来梅州",
+      Hamburg: "汉堡州",
+      Hesse: "黑森州",
+      "Mecklenburg-Vorpommern": "梅克伦堡-前波美拉尼亚州",
+      "Lower Saxony": "下萨克森州",
+      "North Rhine-Westphalia": "北莱茵-威斯特法伦州",
+      "Rhineland-Palatinate": "莱茵兰-普法尔茨州",
+      Saarland: "萨尔州",
+      Saxony: "萨克森州",
+      "Saxony-Anhalt": "萨克森-安哈尔特州",
+      "Schleswig-Holstein": "石勒苏益格-荷尔斯泰因州",
+      Thuringia: "图林根州"
+    }
   };
   const CITY_SEARCH_ALIASES = {
     "维也纳": "Wien",
@@ -68,6 +89,11 @@
     const simplified = toSimplified(value);
     const key = simplified.toLocaleLowerCase("zh-CN").replace(/\s+/g, " ").trim();
     return CITY_NAME_ALIASES[String(countryCode || "").toUpperCase()]?.[key] || simplified;
+  }
+
+  function localizeRegionName(value, countryCode) {
+    const simplified = toSimplified(value);
+    return REGION_NAME_ALIASES[String(countryCode || "").toUpperCase()]?.[simplified] || simplified;
   }
 
   function getCitySearchQuery(value) {
@@ -735,7 +761,7 @@
               originalName: row[1] || name,
               countryCode,
               countryName: getCountryName(countryCode),
-              region: toSimplified(row[3] || ""),
+              region: localizeRegionName(row[3] || "", originalCountryCode),
               lat: Number(row[4]),
               lng: Number(row[5]),
               population: Number(row[6] || 0),
@@ -805,6 +831,11 @@
 
   function renderSearchResults(candidates) {
     els.searchResults.replaceChildren();
+    const duplicateNames = candidates.reduce((counts, candidate) => {
+      const key = normalized(candidate.name);
+      counts.set(key, (counts.get(key) || 0) + 1);
+      return counts;
+    }, new Map());
     candidates.forEach(candidate => {
       const button = document.createElement("button");
       button.type = "button";
@@ -813,7 +844,8 @@
       const title = document.createElement("strong");
       title.textContent = candidate.name;
       const detail = document.createElement("small");
-      detail.textContent = candidate.detail;
+      const showRegion = (duplicateNames.get(normalized(candidate.name)) || 0) > 1;
+      detail.textContent = showRegion ? candidateDetail(candidate, true) : candidate.detail;
       copy.append(title, detail);
       const plus = document.createElement("span");
       plus.textContent = "+";
@@ -823,8 +855,8 @@
     });
   }
 
-  function candidateDetail(item) {
-    return [item.name, isChinaPlace(item) ? item.region : "", item.countryName].filter(Boolean).join(" · ");
+  function candidateDetail(item, includeRegion = isChinaPlace(item)) {
+    return [item.name, includeRegion ? item.region : "", item.countryName].filter(Boolean).join(" · ");
   }
 
   function clearPendingMapSelection(options = {}) {
