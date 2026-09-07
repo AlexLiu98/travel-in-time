@@ -69,6 +69,7 @@
   let countryCodeMap = {};
   let localCities = [];
   let localCityLoadPromise = null;
+  let extremeCities = {};
   let pendingMarker = null;
   let pendingLookupId = 0;
   let pendingMapCityName = "";
@@ -479,9 +480,55 @@
     els.countryProgress.textContent = `${Math.min(100, Math.round(countryTotal / SOVEREIGN_COUNT * 100))}%`;
     els.worldTabMeta.textContent = `${countryTotal} 个国家 · ${cityTotal} 个城市`;
     els.chinaTabMeta.textContent = `${chinaCities} 个城市`;
+    renderExtremeCities();
     renderVisitedList();
     renderBoundaryLayers();
     renderMarkers();
+  }
+
+  function formatLatitude(value) {
+    return `${Math.abs(value).toFixed(2)}°${value >= 0 ? "N" : "S"}`;
+  }
+
+  function formatLongitude(value) {
+    return `${Math.abs(value).toFixed(2)}°${value >= 0 ? "E" : "W"}`;
+  }
+
+  function renderExtremeCities() {
+    const cities = state.cities.filter(city => Number.isFinite(city.lat) && Number.isFinite(city.lng));
+    const pick = compare => cities.reduce((best, city) => (!best || compare(city, best) ? city : best), null);
+    extremeCities = {
+      north: pick((city, best) => city.lat > best.lat),
+      south: pick((city, best) => city.lat < best.lat),
+      east: pick((city, best) => city.lng > best.lng),
+      west: pick((city, best) => city.lng < best.lng)
+    };
+
+    document.querySelectorAll(".extreme-card").forEach(card => {
+      const direction = card.dataset.extreme;
+      const city = extremeCities[direction];
+      const name = card.querySelector("strong");
+      const coordinate = card.querySelector("em");
+      card.disabled = !city;
+      card.classList.toggle("has-city", Boolean(city));
+      name.textContent = city?.name || "等待抵达";
+      coordinate.textContent = city
+        ? (["north", "south"].includes(direction) ? formatLatitude(city.lat) : formatLongitude(city.lng))
+        : "—";
+      card.title = city ? `${city.name} · ${coordinate.textContent}` : "还没有带坐标的城市足迹";
+    });
+  }
+
+  function focusExtremeCity(direction) {
+    const city = extremeCities[direction];
+    if (!city || !map) return;
+    const focus = () => map.flyTo([city.lat, city.lng], 8, { duration: .85 });
+    if (currentView === "china" && !isChinaPlace(city)) {
+      switchView("world");
+      setTimeout(focus, 850);
+    } else {
+      focus();
+    }
   }
 
   function renderVisitedList() {
@@ -1019,6 +1066,7 @@
 
   function bindEvents() {
     document.querySelectorAll(".view-tab").forEach(tab => tab.addEventListener("click", () => switchView(tab.dataset.view)));
+    document.querySelectorAll(".extreme-card").forEach(card => card.addEventListener("click", () => focusExtremeCity(card.dataset.extreme)));
     els.addCountryBtn.addEventListener("click", () => {
       const code = els.countrySelect.value;
       addCountry(code).then(added => { if (added) els.countrySelect.value = ""; });
