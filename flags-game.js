@@ -43,6 +43,7 @@
   let remainingMs = LEVELS.easy.seconds * 1000;
   let timerId = 0;
   let toastId = 0;
+  let runId = 0;
   let audioContext = null;
   let bgmTimer = 0;
   let bgmStep = 0;
@@ -390,7 +391,15 @@
     remainingPairs -= 1;
     els.pairs.textContent = remainingPairs;
     if (remainingPairs === 0) {
-      finishGame(true);
+      remainingMs = Math.max(0, deadline - Date.now());
+      clearInterval(timerId);
+      locked = true;
+      const completedRun = runId;
+      setTimeout(() => {
+        if (!playing || runId !== completedRun) return;
+        locked = false;
+        finishGame(true, true);
+      }, 420);
       return;
     }
     if (!findAnyPair()) reshuffle(true);
@@ -427,14 +436,19 @@
       burstAt(secondElement);
       drawPath(path);
       els.last.innerHTML = `<span>最近识别</span><strong>${firstTile.name}</strong>`;
+      board[first.row][first.col] = null;
+      board[position.row][position.col] = null;
+      selected = null;
+      locked = false;
       setTimeout(() => {
-        board[first.row][first.col] = null;
-        board[position.row][position.col] = null;
-        selected = null;
-        locked = false;
-        renderBoard();
-        afterMatch();
+        firstElement?.classList.remove("selected", "clearing");
+        secondElement?.classList.remove("selected", "clearing");
+        firstElement?.classList.add("matched");
+        secondElement?.classList.add("matched");
+        if (firstElement) firstElement.disabled = true;
+        if (secondElement) secondElement.disabled = true;
       }, 420);
+      afterMatch();
     } else {
       firstElement?.classList.add("wrong");
       secondElement?.classList.add("wrong");
@@ -471,9 +485,9 @@
     }
   };
 
-  const finishGame = won => {
+  const finishGame = (won, preserveRemaining = false) => {
     if (!playing) return;
-    if (!paused) remainingMs = Math.max(0, deadline - Date.now());
+    if (!paused && !preserveRemaining) remainingMs = Math.max(0, deadline - Date.now());
     playing = false;
     paused = false;
     clearInterval(timerId);
@@ -503,6 +517,7 @@
 
   const startGame = () => {
     const cfg = LEVELS[levelKey];
+    runId += 1;
     const selectedFlags = shuffleArray(FLAGS).slice(0, cfg.pairs);
     const deck = shuffleArray(selectedFlags.flatMap(flag => [flag, flag]));
     board = Array.from({ length: cfg.rows }, (_, row) => deck.slice(row * cfg.cols, (row + 1) * cfg.cols));
