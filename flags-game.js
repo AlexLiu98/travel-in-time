@@ -19,7 +19,7 @@
   const AUDIO_KEY = "travel_in_time_flag_link_audio_v1";
   const els = {
     board: document.getElementById("gameBoard"), frame: document.getElementById("boardFrame"),
-    path: document.getElementById("pathLayer"), timer: document.getElementById("timer"),
+    path: document.getElementById("pathLayer"), effects: document.getElementById("matchEffects"), timer: document.getElementById("timer"),
     pairs: document.getElementById("pairCount"), level: document.getElementById("levelName"),
     start: document.getElementById("startBtn"), hint: document.getElementById("hintBtn"),
     hintCount: document.getElementById("hintCount"), pause: document.getElementById("pauseBtn"),
@@ -302,10 +302,70 @@
 
   const drawPath = points => {
     els.path.setAttribute("viewBox", `0 0 ${els.frame.clientWidth} ${els.frame.clientHeight}`);
-    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    polyline.setAttribute("points", points.map(point => pathPoint(point).join(",")).join(" "));
-    els.path.replaceChildren(polyline);
-    setTimeout(() => els.path.replaceChildren(), 260);
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const pixelPoints = points.map(pathPoint);
+    const route = pixelPoints.map(([x, y], index) => `${index ? "L" : "M"}${x} ${y}`).join(" ");
+    const defs = document.createElementNS(svgNamespace, "defs");
+    const gradient = document.createElementNS(svgNamespace, "linearGradient");
+    gradient.id = "matchPathGradient";
+    gradient.setAttribute("x1", "0%");
+    gradient.setAttribute("x2", "100%");
+    [["0%", "#50d7d1"], ["38%", "#fff3c5"], ["68%", "#d6aa50"], ["100%", "#50d7d1"]].forEach(([offset, color]) => {
+      const stop = document.createElementNS(svgNamespace, "stop");
+      stop.setAttribute("offset", offset);
+      stop.setAttribute("stop-color", color);
+      gradient.append(stop);
+    });
+    defs.append(gradient);
+
+    const makePath = className => {
+      const path = document.createElementNS(svgNamespace, "path");
+      path.setAttribute("class", className);
+      path.setAttribute("d", route);
+      return path;
+    };
+    const glow = makePath("path-glow");
+    const ribbon = makePath("path-ribbon");
+    const highlight = makePath("path-highlight");
+    const nodes = pixelPoints.slice(1, -1).map(([cx, cy]) => {
+      const circle = document.createElementNS(svgNamespace, "circle");
+      circle.setAttribute("class", "path-node");
+      circle.setAttribute("cx", cx);
+      circle.setAttribute("cy", cy);
+      circle.setAttribute("r", "3.4");
+      return circle;
+    });
+    const runner = document.createElementNS(svgNamespace, "circle");
+    runner.setAttribute("class", "path-runner");
+    runner.setAttribute("r", "3.5");
+    const motion = document.createElementNS(svgNamespace, "animateMotion");
+    motion.setAttribute("dur", ".42s");
+    motion.setAttribute("path", route);
+    motion.setAttribute("repeatCount", "indefinite");
+    runner.append(motion);
+    els.path.replaceChildren(defs, glow, ribbon, highlight, ...nodes, runner);
+    setTimeout(() => els.path.replaceChildren(), 460);
+  };
+
+  const burstAt = element => {
+    if (!element) return;
+    const tileRect = element.getBoundingClientRect();
+    const frameRect = els.frame.getBoundingClientRect();
+    const left = tileRect.left - frameRect.left + tileRect.width / 2;
+    const top = tileRect.top - frameRect.top + tileRect.height / 2;
+    for (let index = 0; index < 12; index += 1) {
+      const particle = document.createElement("i");
+      const angle = (Math.PI * 2 * index) / 12 + (index % 2 ? .12 : -.08);
+      const distance = 22 + (index % 4) * 7;
+      particle.className = "match-particle";
+      particle.style.left = `${left}px`;
+      particle.style.top = `${top}px`;
+      particle.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+      particle.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+      particle.style.setProperty("--delay", `${(index % 3) * 16}ms`);
+      els.effects.append(particle);
+      setTimeout(() => particle.remove(), 620);
+    }
   };
 
   const reshuffle = (automatic = false) => {
@@ -361,8 +421,10 @@
 
     if (path) {
       playMatch();
-      firstElement?.classList.add("matched");
-      secondElement?.classList.add("selected", "matched");
+      firstElement?.classList.add("clearing");
+      secondElement?.classList.add("selected", "clearing");
+      burstAt(firstElement);
+      burstAt(secondElement);
       drawPath(path);
       els.last.innerHTML = `<span>最近识别</span><strong>${firstTile.name}</strong>`;
       setTimeout(() => {
@@ -372,7 +434,7 @@
         locked = false;
         renderBoard();
         afterMatch();
-      }, 230);
+      }, 420);
     } else {
       firstElement?.classList.add("wrong");
       secondElement?.classList.add("wrong");
