@@ -16,6 +16,7 @@
   ].map(([code, name]) => ({ code, name }));
 
   const BEST_KEY = "travel_in_time_flag_link_best_v1";
+  const AUDIO_KEY = "travel_in_time_flag_link_audio_v1";
   const els = {
     board: document.getElementById("gameBoard"), frame: document.getElementById("boardFrame"),
     path: document.getElementById("pathLayer"), timer: document.getElementById("timer"),
@@ -26,7 +27,8 @@
     toast: document.getElementById("gameToast"), dialog: document.getElementById("resultDialog"),
     resultEyebrow: document.getElementById("resultEyebrow"), resultTitle: document.getElementById("resultTitle"),
     resultText: document.getElementById("resultText"), resultTime: document.getElementById("resultTime"),
-    again: document.getElementById("againBtn"), closeResult: document.getElementById("closeResultBtn")
+    again: document.getElementById("againBtn"), closeResult: document.getElementById("closeResultBtn"),
+    sound: document.getElementById("soundToggle")
   };
 
   let levelKey = "easy";
@@ -41,6 +43,95 @@
   let remainingMs = LEVELS.easy.seconds * 1000;
   let timerId = 0;
   let toastId = 0;
+  let audioContext = null;
+  let bgmTimer = 0;
+  let bgmStep = 0;
+  let soundEnabled = localStorage.getItem(AUDIO_KEY) !== "off";
+
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  const BGM_MELODY = [
+    523.25, 659.25, 783.99, 659.25,
+    587.33, 698.46, 880, 698.46,
+    659.25, 783.99, 987.77, 783.99,
+    587.33, 698.46, 783.99, 659.25
+  ];
+  const BGM_BASS = [130.81, 146.83, 164.81, 146.83];
+
+  const ensureAudio = () => {
+    if (!soundEnabled || !AudioContextClass) return null;
+    if (!audioContext) audioContext = new AudioContextClass();
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    return audioContext;
+  };
+
+  const playTone = (frequency, duration, volume, delay = 0, type = "triangle") => {
+    const context = ensureAudio();
+    if (!context) return;
+    const start = context.currentTime + delay;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(.0001, start);
+    gain.gain.exponentialRampToValueAtTime(volume, start + .018);
+    gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start(start);
+    oscillator.stop(start + duration + .03);
+  };
+
+  const playClick = () => {
+    playTone(430, .075, .026, 0, "sine");
+    playTone(620, .055, .012, .018, "triangle");
+  };
+
+  const playMatch = () => {
+    [659.25, 783.99, 987.77].forEach((note, index) => playTone(note, .2, .045, index * .055, "triangle"));
+  };
+
+  const playStart = () => {
+    playTone(523.25, .2, .045, 0, "triangle");
+    playTone(659.25, .24, .04, .09, "triangle");
+  };
+
+  const playFinish = won => {
+    const notes = won ? [659.25, 783.99, 987.77, 1318.51] : [392, 329.63, 261.63];
+    notes.forEach((note, index) => playTone(note, won ? .32 : .27, .05, index * .085, won ? "triangle" : "sine"));
+  };
+
+  const stopBgm = () => {
+    clearInterval(bgmTimer);
+    bgmTimer = 0;
+  };
+
+  const playBgmStep = () => {
+    if (!soundEnabled || !playing || paused) return;
+    const step = bgmStep % BGM_MELODY.length;
+    playTone(BGM_MELODY[step], .3, .014, 0, "triangle");
+    if (step % 4 === 0) playTone(BGM_BASS[(step / 4) % BGM_BASS.length], .38, .012, 0, "sine");
+    bgmStep += 1;
+  };
+
+  const startBgm = () => {
+    stopBgm();
+    if (!soundEnabled || !playing || paused) return;
+    ensureAudio();
+    playBgmStep();
+    bgmTimer = setInterval(playBgmStep, 390);
+  };
+
+  const updateSoundButton = () => {
+    const supported = Boolean(AudioContextClass);
+    if (!supported) soundEnabled = false;
+    els.sound.disabled = !supported;
+    els.sound.classList.toggle("muted", !soundEnabled);
+    els.sound.setAttribute("aria-pressed", String(soundEnabled));
+    els.sound.setAttribute("aria-label", supported ? (soundEnabled ? "关闭游戏声音" : "开启游戏声音") : "当前浏览器不支持游戏声音");
+    els.sound.title = supported ? (soundEnabled ? "关闭游戏声音" : "开启游戏声音") : "当前浏览器不支持游戏声音";
+    els.sound.querySelector("span").textContent = soundEnabled ? "♫" : "♩";
+    els.sound.querySelector("b").textContent = soundEnabled ? "音乐开启" : "已静音";
+  };
 
   const shuffleArray = values => {
     const copy = [...values];
@@ -247,6 +338,7 @@
 
   function chooseTile(position) {
     if (!playing || paused || locked || !tileAt(position)) return;
+    playClick();
     const element = tileElement(position);
     if (!selected) {
       selected = position;
@@ -268,6 +360,7 @@
     locked = true;
 
     if (path) {
+      playMatch();
       firstElement?.classList.add("matched");
       secondElement?.classList.add("selected", "matched");
       drawPath(path);
@@ -304,6 +397,7 @@
     if (!playing || paused === value) return;
     paused = value;
     if (paused) {
+      stopBgm();
       remainingMs = Math.max(0, deadline - Date.now());
       els.pause.innerHTML = "<span>▶</span><strong>继续</strong><small>恢复计时</small>";
       els.board.style.filter = "blur(5px) brightness(.52)";
@@ -311,6 +405,7 @@
       deadline = Date.now() + remainingMs;
       els.pause.innerHTML = "<span>Ⅱ</span><strong>暂停</strong><small>计时停止</small>";
       els.board.style.filter = "";
+      startBgm();
     }
   };
 
@@ -320,6 +415,8 @@
     playing = false;
     paused = false;
     clearInterval(timerId);
+    stopBgm();
+    playFinish(won);
     els.hint.disabled = true;
     els.pause.disabled = true;
     els.shuffle.disabled = true;
@@ -370,11 +467,14 @@
     if (!findAnyPair()) reshuffle(true);
     clearInterval(timerId);
     timerId = setInterval(updateTimer, 200);
+    playStart();
+    startBgm();
   };
 
   document.querySelectorAll(".difficulty").forEach(button => button.addEventListener("click", () => {
     if (playing && !confirm("切换难度会结束当前游戏，是否继续？")) return;
     clearInterval(timerId);
+    stopBgm();
     playing = false;
     paused = false;
     levelKey = button.dataset.level;
@@ -410,6 +510,18 @@
 
   els.pause.addEventListener("click", () => setPaused(!paused));
   els.shuffle.addEventListener("click", () => reshuffle(false));
+  els.sound.addEventListener("click", () => {
+    if (!AudioContextClass) return;
+    soundEnabled = !soundEnabled;
+    localStorage.setItem(AUDIO_KEY, soundEnabled ? "on" : "off");
+    updateSoundButton();
+    if (soundEnabled) {
+      playClick();
+      startBgm();
+    } else {
+      stopBgm();
+    }
+  });
   els.again.addEventListener("click", () => { els.dialog.close(); startGame(); });
   els.closeResult.addEventListener("click", () => els.dialog.close());
   document.addEventListener("visibilitychange", () => {
@@ -420,4 +532,5 @@
   });
 
   updateBestBoard();
+  updateSoundButton();
 })();
