@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111d" />
+    <meta name="description" content="Travel in Time 国旗连连看：连接相同国旗，挑战三档难度。" />
+    <title>国旗连连看 · Travel in Time</title>
+    <link rel="stylesheet" href="./flags-game.css?v=3" />
+  </head>
+  <body>
+    <div class="game-shell">
+      <header class="game-header">
+        <a class="back-link" id="backLink" href="./index.html" aria-label="返回旅行地图">←</a>
+        <a class="game-brand" id="brandLink" href="./index.html">
+          <span class="brand-gem" aria-hidden="true">✦</span>
+          <span><strong>Travel in Time</strong><small>FLAG LINK</small></span>
+        </a>
+        <div class="header-title"><span>小游戏</span><strong>国旗连连看</strong></div>
+      </header>
+
+      <main>
+        <section class="game-intro">
+          <div>
+            <p class="eyebrow">A JOURNEY IN FLAGS</p>
+            <h1>连接相同的国旗</h1>
+            <p>两面相同国旗之间的路线不超过两个转弯即可消除。</p>
+          </div>
+          <div class="best-board" aria-label="各难度最佳记录">
+            <article><span>简单</span><strong id="bestEasy">—</strong></article>
+            <article><span>中等</span><strong id="bestMedium">—</strong></article>
+            <article><span>困难</span><strong id="bestHard">—</strong></article>
+          </div>
+        </section>
+
+        <section class="game-controls" aria-label="游戏设置">
+          <div class="difficulty-picker" role="group" aria-label="选择难度">
+            <button class="difficulty active" data-level="easy" type="button"><strong>简单</strong><small>12 对 · 2:00</small></button>
+            <button class="difficulty" data-level="medium" type="button"><strong>中等</strong><small>24 对 · 4:00</small></button>
+            <button class="difficulty" data-level="hard" type="button"><strong>困难</strong><small>40 对 · 6:00</small></button>
+          </div>
+          <button class="gold-button" id="startBtn" type="button">开始游戏</button>
+        </section>
+
+        <section class="play-panel">
+          <div class="board-column">
+            <div class="game-status" aria-label="游戏状态">
+              <div><small>剩余时间</small><strong id="timer">02:00</strong></div>
+              <div><small>剩余配对</small><strong id="pairCount">12</strong></div>
+              <div><small>当前难度</small><strong id="levelName">简单</strong></div>
+            </div>
+            <div class="board-frame" id="boardFrame">
+              <span class="outer-route-label outer-route-label-top" aria-hidden="true">外围通道 · 可连线</span>
+              <span class="outer-route-label outer-route-label-bottom" aria-hidden="true">可从棋盘外侧绕行</span>
+              <svg class="path-layer" id="pathLayer" aria-hidden="true"></svg>
+              <div class="game-board empty" id="gameBoard" aria-label="国旗连连看棋盘">
+                <div class="board-placeholder"><span>✦</span><strong>选择难度后开始</strong><small>相同国旗，连线消除</small></div>
+              </div>
+            </div>
+          </div>
+
+          <aside class="game-side">
+            <div class="side-actions">
+              <button id="hintBtn" type="button" disabled><span>◎</span><strong>提示</strong><small id="hintCount">3 次</small></button>
+              <button id="pauseBtn" type="button" disabled><span>Ⅱ</span><strong>暂停</strong><small>计时停止</small></button>
+              <button id="shuffleBtn" type="button" disabled><span>↻</span><strong>洗牌</strong><small>重新排列</small></button>
+            </div>
+            <div class="rule-card">
+              <span class="rule-number">02</span>
+              <div><strong>最多两个转弯</strong><p>棋盘外侧也可以连接。没有可消除组合时，系统会自动洗牌。</p></div>
+            </div>
+            <div class="last-match" id="lastMatch" aria-live="polite">
+              <span>最近识别</span><strong>等待开始</strong>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <div class="game-toast" id="gameToast" role="status" aria-live="polite"></div>
+    <dialog id="resultDialog">
+      <div class="result-medal" aria-hidden="true">✦</div>
+      <p class="eyebrow" id="resultEyebrow">CHALLENGE COMPLETE</p>
+      <h2 id="resultTitle">全部完成！</h2>
+      <p id="resultText"></p>
+      <strong class="result-time" id="resultTime">00:00</strong>
+      <div class="result-actions">
+        <button class="secondary-button" id="closeResultBtn" type="button">稍后再玩</button>
+        <button class="gold-button" id="againBtn" type="button">再来一局</button>
+      </div>
+    </dialog>
+
+    <script src="./flags-game.js?v=3"></script>
+  </body>
+</html>
