@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#07111d" />
     <meta name="description" content="Travel in Time 国旗连连看：连接相同国旗，挑战三档难度。" />
     <title>国旗连连看 · Travel in Time</title>
-    <link rel="stylesheet" href="./flags-game.css?v=5" />
+    <link rel="stylesheet" href="./flags-game.css?v=6" />
   </head>
   <body>
     <div class="game-shell">
@@ -56,6 +56,7 @@
               <span class="outer-route-label outer-route-label-top" aria-hidden="true">外围通道 · 可连线</span>
               <span class="outer-route-label outer-route-label-bottom" aria-hidden="true">可从棋盘外侧绕行</span>
               <svg class="path-layer" id="pathLayer" aria-hidden="true"></svg>
+              <div class="match-effects" id="matchEffects" aria-hidden="true"></div>
               <div class="game-board empty" id="gameBoard" aria-label="国旗连连看棋盘">
                 <div class="board-placeholder"><span>✦</span><strong>选择难度后开始</strong><small>相同国旗，连线消除</small></div>
               </div>
@@ -93,6 +94,6 @@
       </div>
     </dialog>
 
-    <script src="./flags-game.js?v=6"></script>
+    <script src="./flags-game.js?v=7"></script>
   </body>
 </html>
