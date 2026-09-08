@@ -53,6 +53,13 @@ button { cursor: pointer; }
 .brand strong { display: block; font-size: 1.04rem; letter-spacing: 0; }
 .brand small { display: block; color: var(--muted); font-size: .62rem; letter-spacing: .12em; margin-top: 2px; }
 .top-actions { display: flex; align-items: center; gap: 9px; }
+.game-entry {
+  height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(204,156,68,.38);
+  border-radius: 11px; color: #f0d590; background: rgba(117,76,15,.1); font-size: .72rem; text-decoration: none; transition: .18s ease;
+}
+.game-entry span { color: #d7a94d; font-size: .68rem; transform: rotate(45deg); }
+.game-entry b { font-weight: 760; white-space: nowrap; }
+.game-entry:hover { color: #fff4d1; border-color: rgba(230,190,104,.68); background: rgba(151,100,20,.18); transform: translateY(-1px); }
 .save-note { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .82rem; margin-right: 8px; }
 .save-note i { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 .save-note.sync-error i { background: var(--coral); box-shadow: 0 0 10px var(--coral); }
@@ -351,6 +358,8 @@ dialog p { color: var(--muted); font-size: .84rem; line-height: 1.6; margin: 0 0
   .brand small { display: none; }
   .account-button.login { width: 40px; padding: 0; font-size: 0; }
   .account-button.login::after { content: "登录"; font-size: .76rem; }
+  .game-entry { width: 40px; padding: 0; justify-content: center; }
+  .game-entry b { display: none; }
   main { padding-top: 12px; }
   .overview { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 82px 214px; min-height: 480px; padding: 17px; }
   .overview-media { width: 190%; }
@@ -394,4 +403,9 @@ dialog p { color: var(--muted); font-size: .84rem; line-height: 1.6; margin: 0 0
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+@media (max-width: 420px) {
+  .topbar .brand > span:last-child { display: none; }
+  .top-actions { gap: 6px; }
 }
