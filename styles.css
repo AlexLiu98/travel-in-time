@@ -60,6 +60,9 @@ button { cursor: pointer; }
 .game-entry span { color: #d7a94d; font-size: .68rem; transform: rotate(45deg); }
 .game-entry b { font-weight: 760; white-space: nowrap; }
 .game-entry:hover { color: #fff4d1; border-color: rgba(230,190,104,.68); background: rgba(151,100,20,.18); transform: translateY(-1px); }
+.rating-entry { border-color: rgba(73,214,209,.3); color: #bdecea; background: rgba(24,101,104,.09); }
+.rating-entry span { color: var(--cyan); font-size: .82rem; transform: none; }
+.rating-entry:hover { color: #e8ffff; border-color: rgba(73,214,209,.58); background: rgba(35,129,132,.15); }
 .save-note { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .82rem; margin-right: 8px; }
 .save-note i { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 .save-note.sync-error i { background: var(--coral); box-shadow: 0 0 10px var(--coral); }
@@ -400,7 +403,6 @@ dialog p { color: var(--muted); font-size: .84rem; line-height: 1.6; margin: 0 0
   .visited-columns { grid-template-columns: 1fr; gap: 18px; }
   .result-item small { max-width: 230px; }
 }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
