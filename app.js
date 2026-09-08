@@ -53,8 +53,10 @@
     "mapLabel", "mapHint", "mapFallback", "countryGroup", "countrySelect", "addCountryBtn", "cityInput",
     "searchCityBtn", "cityCountryGroup", "cityCountrySelect", "searchStatus", "searchResults",
     "addTitle", "viewBadge", "visitedTitle", "filterInput", "visitedList", "fitBtn", "exportBtn", "importBtn",
-    "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote"
+    "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote", "accountButton", "ratingsEntry"
   ].map(id => [id, document.getElementById(id)]));
+
+  const accountMode = new URLSearchParams(window.location.search).get("mode") === "account";
 
   let currentView = "world";
   let map = null;
@@ -77,6 +79,9 @@
   let pendingPreviousCountryCode = "";
   let toastTimer = null;
   let activeStorageKey = STORAGE_KEY;
+  let cloudReady = false;
+  let cloudSaveTimer = null;
+  let cloudSaveChain = Promise.resolve();
 
   const regionNames = typeof Intl.DisplayNames === "function"
     ? new Intl.DisplayNames(["zh-CN"], { type: "region" })
@@ -152,8 +157,19 @@
             ? ({ TW: "台湾省", HK: "香港特别行政区", MO: "澳门特别行政区" }[originalCode])
             : localizeRegionName(item.region, originalCode)
         };
-      })
+      }),
+      cityRatings: normalizeCityRatings(data.cityRatings)
     };
+  }
+
+  function normalizeCityRatings(value) {
+    const ratings = {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) return ratings;
+    Object.entries(value).forEach(([cityId, rawRating]) => {
+      const rating = Math.round(Number(rawRating) * 2) / 2;
+      if (cityId && Number.isFinite(rating) && rating >= 1 && rating <= 5) ratings[cityId] = rating;
+    });
+    return ratings;
   }
 
   function loadState() {
@@ -165,17 +181,133 @@
         return normalizedState;
       }
     } catch { /* use a clean state */ }
-    return { countries: [], cities: [] };
+    return { countries: [], cities: [], cityRatings: {} };
   }
 
   function saveState() {
     localStorage.setItem(activeStorageKey, JSON.stringify(state));
+    if (cloudReady) scheduleCloudSave();
+  }
+
+  function hasFootprints(value) {
+    return Boolean(value?.countries?.length || value?.cities?.length);
+  }
+
+  function mergeFootprintStates(primary, secondary) {
+    const countries = [...primary.countries];
+    const countryCodes = new Set(countries.map(item => item.code));
+    secondary.countries.forEach(item => {
+      if (!countryCodes.has(item.code)) {
+        countries.push(item);
+        countryCodes.add(item.code);
+      }
+    });
+
+    const cities = [...primary.cities];
+    const cityKeys = new Set(cities.map(item => `${item.countryCode}:${normalized(item.name)}`));
+    secondary.cities.forEach(item => {
+      const key = `${item.countryCode}:${normalized(item.name)}`;
+      if (!cityKeys.has(key)) {
+        cities.push(item);
+        cityKeys.add(key);
+      }
+    });
+    return { countries, cities, cityRatings: { ...(secondary.cityRatings || {}), ...(primary.cityRatings || {}) } };
+  }
+
+  function readCachedState(key) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(key));
+      if (saved && Array.isArray(saved.countries) && Array.isArray(saved.cities)) return normalizeStateData(saved);
+    } catch { /* ignore an invalid local cache */ }
+    return null;
   }
 
   function setSyncStatus(message, failed = false) {
     if (!els.saveNote) return;
     els.saveNote.lastChild.textContent = ` ${message}`;
     els.saveNote.classList.toggle("sync-error", failed);
+  }
+
+  function configureAccountUI() {
+    if (els.ratingsEntry) els.ratingsEntry.href = accountMode ? "./ratings.html?mode=account" : "./ratings.html";
+    if (!els.accountButton) return;
+    if (accountMode) {
+      els.accountButton.textContent = "退出";
+      els.accountButton.href = "/signout-with-chatgpt?return_to=/";
+      els.accountButton.classList.remove("login");
+      setSyncStatus("正在连接账号");
+      return;
+    }
+    els.accountButton.textContent = "登录同步";
+    els.accountButton.href = "/signin-with-chatgpt?return_to=/";
+    els.accountButton.classList.add("login");
+    setSyncStatus("游客模式 · 仅保存在本机");
+  }
+
+  function scheduleCloudSave() {
+    clearTimeout(cloudSaveTimer);
+    setSyncStatus("正在同步…");
+    cloudSaveTimer = setTimeout(() => {
+      const body = JSON.stringify({ state });
+      cloudSaveChain = cloudSaveChain.then(() => saveCloudSnapshot(body));
+    }, 450);
+  }
+
+  async function saveCloudSnapshot(body) {
+    try {
+      const response = await fetch("/api/footprints", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body
+      });
+      if (response.status === 401) {
+        window.top.location.href = "/";
+        return;
+      }
+      if (!response.ok) throw new Error("save failed");
+      setSyncStatus("已同步到 ChatGPT 账号");
+    } catch {
+      setSyncStatus("同步失败，已保存在本机", true);
+    }
+  }
+
+  async function connectAccount() {
+    configureAccountUI();
+    if (!accountMode) return;
+    const legacyState = state;
+    try {
+      const response = await fetch("/api/footprints", { cache: "no-store" });
+      if (response.status === 401) {
+        window.top.location.href = "/";
+        return;
+      }
+      if (!response.ok) throw new Error("load failed");
+      const data = await response.json();
+      const accountKey = `${STORAGE_KEY}:${data.accountKey}`;
+      const accountCache = readCachedState(accountKey);
+      const remoteState = normalizeStateData(data.state || { countries: [], cities: [] });
+      activeStorageKey = accountKey;
+
+      if (hasFootprints(remoteState)) {
+        state = hasFootprints(legacyState) ? mergeFootprintStates(remoteState, legacyState) : remoteState;
+      }
+      else if (hasFootprints(accountCache)) state = accountCache;
+      else if (hasFootprints(legacyState)) state = legacyState;
+      else state = { countries: [], cities: [], cityRatings: {} };
+
+      localStorage.setItem(activeStorageKey, JSON.stringify(state));
+      localStorage.removeItem(STORAGE_KEY);
+      cloudReady = true;
+      render();
+      if (JSON.stringify(state) !== JSON.stringify(remoteState)) {
+        await saveCloudSnapshot(JSON.stringify({ state }));
+      } else {
+        setSyncStatus("已同步到 ChatGPT 账号");
+      }
+    } catch {
+      setSyncStatus("账号同步暂不可用，已保存在本机", true);
+    }
   }
 
   function normalized(value) {
@@ -716,6 +848,7 @@
       }
       state.countries = state.countries.filter(item => item.code !== id);
     } else {
+      if (state.cityRatings) delete state.cityRatings[id];
       state.cities = state.cities.filter(item => item.id !== id);
     }
     saveState();
@@ -1110,7 +1243,7 @@
     els.importFile.addEventListener("change", () => { if (els.importFile.files[0]) importData(els.importFile.files[0]); });
     els.clearBtn.addEventListener("click", () => els.confirmDialog.showModal());
     els.confirmClearBtn.addEventListener("click", () => {
-      state = { countries: [], cities: [] };
+      state = { countries: [], cities: [], cityRatings: {} };
       saveState();
       render();
       toast("所有足迹已清空");
@@ -1123,5 +1256,5 @@
   bindEvents();
   render();
   initMap();
-  setSyncStatus("游客模式 · 仅保存在本机");
+  connectAccount();
 })();
