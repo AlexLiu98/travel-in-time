@@ -34,6 +34,13 @@ button { color: inherit; }
 .header-title { margin-left: auto; display: flex; align-items: baseline; gap: 8px; }
 .header-title span { color: var(--gold); font-size: .68rem; letter-spacing: .14em; }
 .header-title strong { font-size: .92rem; }
+.sound-toggle { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(214,170,80,.32); border-radius: 11px; color: #ead49f; background: linear-gradient(145deg, rgba(88,60,18,.2), rgba(9,25,40,.82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); cursor: pointer; }
+.sound-toggle span { color: var(--gold-bright); font-size: 1rem; line-height: 1; }
+.sound-toggle b { font-size: .68rem; font-weight: 700; }
+.sound-toggle:hover { border-color: rgba(214,170,80,.6); background: linear-gradient(145deg, rgba(109,73,20,.27), rgba(12,31,49,.92)); }
+.sound-toggle.muted { color: var(--muted); border-color: var(--line); background: rgba(255,255,255,.025); }
+.sound-toggle.muted span { color: var(--muted); }
+.sound-toggle:disabled { opacity: .4; cursor: default; }
 .game-intro { min-height: 178px; display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: end; padding: 31px 6px 24px; }
 .eyebrow { margin: 0 0 8px; color: var(--cyan); font-size: .68rem; font-weight: 800; letter-spacing: .18em; }
 .game-intro h1 { margin: 0 0 8px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 500; letter-spacing: -.03em; }
@@ -239,6 +246,8 @@ dialog > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: .78rem; li
   .game-brand strong { font-size: .82rem; }
   .game-brand small, .header-title span { display: none; }
   .header-title strong { font-size: .78rem; }
+  .sound-toggle { width: 39px; min-width: 39px; padding: 0; justify-content: center; }
+  .sound-toggle b { display: none; }
   .game-intro { min-height: 0; padding: 23px 3px 18px; }
   .game-intro h1 { font-size: 2rem; }
   .game-intro p:last-child { font-size: .75rem; line-height: 1.5; }
