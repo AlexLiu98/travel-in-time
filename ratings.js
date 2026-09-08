@@ -113,32 +113,57 @@
   const makeStars = (city, currentRating) => {
     const picker = document.createElement("div");
     picker.className = "star-picker";
-    picker.style.setProperty("--fill", `${currentRating * 20}%`);
-    const base = document.createElement("span");
-    base.className = "star-base";
-    base.textContent = "★★★★★";
-    base.setAttribute("aria-hidden", "true");
-    const fill = document.createElement("span");
-    fill.className = "star-fill";
-    fill.textContent = "★★★★★";
-    fill.setAttribute("aria-hidden", "true");
-    const input = document.createElement("input");
-    input.type = "range";
-    input.min = "1";
-    input.max = "5";
-    input.step = ".5";
-    input.value = String(currentRating || 1);
-    input.setAttribute("aria-label", `为${city.name}评分，最低1星，最高5星`);
-    const update = () => {
-      const rating = normalizeRating(input.value);
+    picker.setAttribute("role", "radiogroup");
+    picker.setAttribute("aria-label", `为${city.name}评分，最低1星，最高5星`);
+    const units = [];
+    const paint = rating => units.forEach((unit, index) => {
+      const star = index + 1;
+      unit.classList.toggle("full", rating >= star);
+      unit.classList.toggle("half", rating === star - .5);
+    });
+    const choose = rating => {
       state.cityRatings[cityKey(city)] = rating;
-      picker.style.setProperty("--fill", `${rating * 20}%`);
       saveLocal();
       render();
       showToast(`${city.name}：${rating.toFixed(1)} 星`);
     };
-    input.addEventListener("change", update);
-    picker.append(base, fill, input);
+    for (let star = 1; star <= 5; star += 1) {
+      const unit = document.createElement("span");
+      unit.className = "star-unit";
+      const empty = document.createElement("span");
+      empty.className = "star-empty";
+      empty.textContent = "★";
+      empty.setAttribute("aria-hidden", "true");
+      const light = document.createElement("span");
+      light.className = "star-light";
+      light.textContent = "★";
+      light.setAttribute("aria-hidden", "true");
+      unit.append(empty, light);
+      const addHit = (rating, side) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `star-hit ${side}`;
+        button.setAttribute("role", "radio");
+        button.setAttribute("aria-checked", String(currentRating === rating));
+        button.setAttribute("aria-label", `${rating.toFixed(1)} 星`);
+        button.addEventListener("pointerenter", () => paint(rating));
+        button.addEventListener("focus", () => paint(rating));
+        button.addEventListener("click", () => choose(rating));
+        unit.append(button);
+      };
+      if (star === 1) addHit(1, "whole");
+      else {
+        addHit(star - .5, "left");
+        addHit(star, "right");
+      }
+      units.push(unit);
+      picker.append(unit);
+    }
+    picker.addEventListener("pointerleave", () => paint(currentRating));
+    picker.addEventListener("focusout", event => {
+      if (!picker.contains(event.relatedTarget)) paint(currentRating);
+    });
+    paint(currentRating);
     return picker;
   };
 
