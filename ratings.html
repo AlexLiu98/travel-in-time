@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="Travel in Time 旅行排行榜：为亲自抵达过的城市评分，并生成图片分享。" />
+    <title>旅行排行榜 · Travel in Time</title>
+    <link rel="stylesheet" href="./ratings.css?v=1" />
+  </head>
+  <body>
+    <div class="ranking-shell">
+      <header class="ranking-header">
+        <a class="back-link" id="backLink" href="./index.html" aria-label="返回旅行地图">←</a>
+        <a class="ranking-brand" id="brandLink" href="./index.html">
+          <span class="brand-gem" aria-hidden="true">✦</span>
+          <span><strong>Travel in Time</strong><small>PERSONAL CITY RANKING</small></span>
+        </a>
+        <span class="save-state" id="saveState"><i></i>评分保存在本机</span>
+        <button class="share-button" id="shareBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0 4 4m-4-4-4 4M5 14v6h14v-6" /></svg>
+          <b>生成分享图片</b>
+        </button>
+      </header>
+
+      <main>
+        <section class="ranking-hero">
+          <div class="hero-copy">
+            <p class="eyebrow">MY TRAVEL RANKING</p>
+            <h1>我的旅行排行榜</h1>
+            <p>Give every city you’ve reached a star of its own.</p>
+          </div>
+          <div class="hero-medallion" aria-hidden="true"><span>★</span><i></i></div>
+          <div class="summary-grid" aria-label="评分统计">
+            <article><small>平均评分</small><strong id="averageRating">—</strong><span>AVERAGE</span></article>
+            <article><small>已经评分</small><strong id="ratedCount">0</strong><span>RATED</span></article>
+            <article><small>去过城市</small><strong id="cityCount">0</strong><span>VISITED</span></article>
+          </div>
+        </section>
+
+        <section class="ranking-card">
+          <div class="ranking-card-head">
+            <div>
+              <p class="eyebrow">CITY COLLECTION</p>
+              <h2>城市星级榜</h2>
+            </div>
+            <label class="filter-box">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+              <input id="filterInput" type="search" placeholder="搜索城市或国家" />
+            </label>
+          </div>
+
+          <div class="table-head" aria-hidden="true">
+            <span>名次</span><span>城市</span><span>我的评分（支持半星）</span><span>分数</span>
+          </div>
+          <div class="ranking-list" id="rankingList"></div>
+          <div class="empty-state" id="emptyState" hidden>
+            <span>✦</span>
+            <h2>还没有可以评分的城市</h2>
+            <p>先回到旅行地图，记录一座亲自到过的城市。</p>
+            <a id="emptyBackLink" href="./index.html">返回旅行地图</a>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./ratings.js?v=1"></script>
+  </body>
+</html>
