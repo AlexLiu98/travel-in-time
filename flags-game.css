@@ -196,8 +196,19 @@ button { color: inherit; }
 .flag-tile.hint { animation: hint 650ms ease-in-out 2; border-color: var(--cyan); }
 .flag-tile.wrong { animation: shake 280ms ease; border-color: var(--coral); }
 .flag-tile.matched { opacity: 0; transform: scale(.72); pointer-events: none; }
-.path-layer { position: absolute; z-index: 4; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.path-layer polyline { fill: none; stroke: #f1d28a; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 5px rgba(241,210,138,.7)); }
+.flag-tile.clearing { z-index: 5; pointer-events: none; animation: tile-clear 420ms cubic-bezier(.2,.8,.25,1) forwards; }
+.flag-tile.clearing .flag-art { animation: flag-flash 420ms ease-out forwards; }
+.path-layer { position: absolute; z-index: 6; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.path-layer path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.path-glow { stroke: rgba(214,170,80,.28); stroke-width: 12; filter: blur(3px) drop-shadow(0 0 9px rgba(80,215,209,.42)); }
+.path-ribbon { stroke: url(#matchPathGradient); stroke-width: 4.5; filter: drop-shadow(0 0 5px rgba(241,210,138,.85)); stroke-dasharray: 14 8; animation: route-flow 470ms linear infinite; }
+.path-highlight { stroke: rgba(255,248,218,.92); stroke-width: 1.2; stroke-dasharray: 2 12; animation: route-flow 340ms linear infinite reverse; }
+.path-node { fill: #fff3c5; stroke: #d6aa50; stroke-width: 2; filter: drop-shadow(0 0 6px rgba(241,210,138,.95)); animation: path-node-pulse 420ms ease-in-out infinite alternate; }
+.path-runner { fill: #fff; stroke: #50d7d1; stroke-width: 2; filter: drop-shadow(0 0 7px rgba(80,215,209,.95)); }
+.match-effects { position: absolute; z-index: 7; inset: 0; overflow: hidden; pointer-events: none; }
+.match-particle { --dx: 0px; --dy: 0px; --delay: 0ms; position: absolute; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: #f4d890; box-shadow: 0 0 7px rgba(244,216,144,.9); opacity: 0; animation: particle-burst 540ms cubic-bezier(.17,.67,.24,1) var(--delay) forwards; }
+.match-particle:nth-child(3n) { width: 3px; height: 3px; background: #fff7d5; }
+.match-particle:nth-child(3n + 2) { background: #50d7d1; box-shadow: 0 0 8px rgba(80,215,209,.88); }
 .game-side { display: grid; align-content: start; gap: 12px; }
 .side-actions { display: grid; gap: 8px; }
 .side-actions button { min-height: 66px; display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; padding: 9px 12px; text-align: left; border: 1px solid var(--line); border-radius: 14px; background: rgba(11,29,46,.8); cursor: pointer; }
@@ -228,6 +239,19 @@ dialog > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: .78rem; li
 @keyframes hint { 50% { transform: translateY(-3px) scale(.96); box-shadow: 0 0 0 3px rgba(80,215,209,.18), 0 0 20px rgba(80,215,209,.22); } }
 @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @keyframes pulse { to { opacity: .58; } }
+@keyframes tile-clear {
+  0% { transform: translateY(2px) scale(.98); opacity: 1; box-shadow: 0 0 0 2px rgba(214,170,80,.18), 0 0 14px rgba(214,170,80,.3); }
+  38% { transform: translateY(-5px) scale(1.07); opacity: 1; filter: brightness(1.38) saturate(1.12); box-shadow: 0 0 0 4px rgba(241,210,138,.2), 0 0 30px rgba(80,215,209,.38); }
+  100% { transform: translateY(1px) scale(.58) rotate(3deg); opacity: 0; filter: brightness(1.65); }
+}
+@keyframes flag-flash { 42% { filter: saturate(1.2) brightness(1.5); } 100% { filter: saturate(.8) brightness(1.8); } }
+@keyframes route-flow { to { stroke-dashoffset: -44; } }
+@keyframes path-node-pulse { to { r: 5; opacity: .72; } }
+@keyframes particle-burst {
+  0% { opacity: 0; transform: translate(0,0) scale(.2); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(.15); }
+}
 @media (max-width: 760px) {
   .game-intro { grid-template-columns: 1fr; gap: 18px; align-items: start; }
   .best-board { width: 100%; }
