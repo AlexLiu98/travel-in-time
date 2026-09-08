@@ -103,7 +103,7 @@
       svg.setAttribute("viewBox", "0 0 640 480");
       svg.setAttribute("aria-hidden", "true");
       const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-      use.setAttribute("href", `./flags-sprite.svg#flag-${code.toLowerCase()}`);
+      use.setAttribute("href", `./flags-sprite.svg?v=2#flag-${code.toLowerCase()}`);
       svg.append(use);
       wrapper.append(svg);
     }
@@ -167,12 +167,82 @@
     return picker;
   };
 
+  const formatTier = rating => Number.isInteger(rating) ? String(rating) : rating.toFixed(1);
+
+  const makeCityCard = (city, rating) => {
+    const key = cityKey(city);
+    const card = document.createElement("article");
+    card.className = "rating-city";
+    const info = document.createElement("div");
+    info.className = "city-info";
+    const copy = document.createElement("div");
+    copy.className = "city-copy";
+    const name = document.createElement("strong");
+    name.textContent = city.name || "未命名城市";
+    const meta = document.createElement("span");
+    meta.textContent = [city.region, countryName(city)].filter(Boolean).join(" · ");
+    copy.append(name, meta);
+    info.append(makeFlag(city), copy);
+
+    const controls = document.createElement("div");
+    controls.className = "rating-city-controls";
+    const stars = makeStars(city, rating);
+    const score = document.createElement("div");
+    score.className = "score-cell";
+    const value = document.createElement("output");
+    value.className = `score-value${rating ? "" : " unrated"}`;
+    value.textContent = rating ? rating.toFixed(1) : "未评分";
+    score.append(value);
+    if (rating) {
+      const clear = document.createElement("button");
+      clear.className = "clear-rating";
+      clear.type = "button";
+      clear.textContent = "清除";
+      clear.setAttribute("aria-label", `清除${city.name}的评分`);
+      clear.addEventListener("click", () => {
+        delete state.cityRatings[key];
+        saveLocal();
+        render();
+      });
+      score.append(clear);
+    }
+    controls.append(stars, score);
+    card.append(info, controls);
+    return card;
+  };
+
+  const makeRatingGroup = (rating, cities) => {
+    const group = document.createElement("section");
+    group.className = `rating-group${rating ? "" : " unrated"}`;
+    const head = document.createElement("header");
+    head.className = "rating-group-head";
+    const badge = document.createElement("div");
+    badge.className = "tier-badge";
+    const badgeValue = document.createElement("strong");
+    badgeValue.textContent = rating ? formatTier(rating) : "—";
+    const badgeStar = document.createElement("span");
+    badgeStar.textContent = rating ? "★" : "○";
+    badge.append(badgeValue, badgeStar);
+    const title = document.createElement("div");
+    title.className = "rating-group-title";
+    const heading = document.createElement("h3");
+    heading.textContent = rating ? `${formatTier(rating)} 星城市` : "待评分";
+    const detail = document.createElement("p");
+    detail.textContent = rating ? `${cities.length} 座城市 · 从左到右排列` : `${cities.length} 座城市等待留下星级`;
+    title.append(heading, detail);
+    head.append(badge, title);
+    const grid = document.createElement("div");
+    grid.className = "rating-group-grid";
+    cities.forEach(city => grid.append(makeCityCard(city, rating)));
+    group.append(head, grid);
+    return group;
+  };
+
   const render = () => {
     const sorted = getSortedCities();
     const query = els.filter.value.trim().toLocaleLowerCase("zh-CN");
     const visible = sorted.filter(city => !query || `${city.name} ${countryName(city)} ${city.region || ""}`.toLocaleLowerCase("zh-CN").includes(query));
     const ratedCities = sorted.filter(city => state.cityRatings[cityKey(city)]);
-    const ranks = new Map(ratedCities.map((city, index) => [cityKey(city), index + 1]));
     const average = ratedCities.length
       ? ratedCities.reduce((sum, city) => sum + state.cityRatings[cityKey(city)], 0) / ratedCities.length
       : 0;
@@ -183,48 +253,22 @@
     els.empty.hidden = state.cities.length > 0;
     els.list.hidden = state.cities.length === 0;
     els.list.replaceChildren();
+    if (!visible.length && state.cities.length) {
+      const noResults = document.createElement("p");
+      noResults.className = "filter-empty";
+      noResults.textContent = "没有找到匹配的城市或国家";
+      els.list.append(noResults);
+      return;
+    }
 
+    const groups = new Map();
     visible.forEach(city => {
-      const key = cityKey(city);
-      const rating = state.cityRatings[key] || 0;
-      const rank = ranks.get(key) || 0;
-      const row = document.createElement("article");
-      row.className = `rating-row${rating && rank <= 3 ? " top-three" : ""}`;
-      const rankNumber = document.createElement("span");
-      rankNumber.className = "rank-number";
-      rankNumber.textContent = rating ? String(rank).padStart(2, "0") : "—";
-      const info = document.createElement("div");
-      info.className = "city-info";
-      const copy = document.createElement("div");
-      copy.className = "city-copy";
-      const name = document.createElement("strong");
-      name.textContent = city.name || "未命名城市";
-      const meta = document.createElement("span");
-      meta.textContent = [city.region, countryName(city)].filter(Boolean).join(" · ");
-      copy.append(name, meta);
-      info.append(makeFlag(city), copy);
-      const stars = makeStars(city, rating);
-      const score = document.createElement("div");
-      score.className = "score-cell";
-      const value = document.createElement("output");
-      value.className = `score-value${rating ? "" : " unrated"}`;
-      value.textContent = rating ? rating.toFixed(1) : "未评分";
-      score.append(value);
-      if (rating) {
-        const clear = document.createElement("button");
-        clear.className = "clear-rating";
-        clear.type = "button";
-        clear.textContent = "清除";
-        clear.setAttribute("aria-label", `清除${city.name}的评分`);
-        clear.addEventListener("click", () => {
-          delete state.cityRatings[key];
-          saveLocal();
-          render();
-        });
-        score.append(clear);
-      }
-      row.append(rankNumber, info, stars, score);
-      els.list.append(row);
+      const rating = state.cityRatings[cityKey(city)] || 0;
+      if (!groups.has(rating)) groups.set(rating, []);
+      groups.get(rating).push(city);
+    });
+    [...groups.keys()].sort((a, b) => b - a).forEach(rating => {
+      els.list.append(makeRatingGroup(rating, groups.get(rating)));
     });
   };
 
