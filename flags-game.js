@@ -15,8 +15,6 @@
     ["au","澳大利亚"],["nz","新西兰"],["pg","巴布亚新几内亚"],["fj","斐济"],["sb","所罗门群岛"],["vu","瓦努阿图"],["ws","萨摩亚"],["to","汤加"],["ki","基里巴斯"],["fm","密克罗尼西亚联邦"],["mh","马绍尔群岛"],["pw","帕劳"],["nr","瑙鲁"],["tv","图瓦卢"]
   ].map(([code, name]) => ({ code, name }));
 
-  const flagEmoji = code => String.fromCodePoint(...code.toUpperCase().split("").map(letter => 127397 + letter.charCodeAt(0)));
-
   const BEST_KEY = "travel_in_time_flag_link_best_v1";
   const els = {
     board: document.getElementById("gameBoard"), frame: document.getElementById("boardFrame"),
@@ -171,10 +169,15 @@
         button.disabled = true;
       } else {
         button.setAttribute("aria-label", "国旗牌");
-        const flag = document.createElement("span");
-        flag.className = "flag-art";
-        flag.textContent = flagEmoji(tile.code);
+        const flag = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        flag.setAttribute("class", "flag-art");
+        flag.setAttribute("viewBox", "0 0 640 480");
         flag.setAttribute("aria-hidden", "true");
+        flag.setAttribute("focusable", "false");
+        const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        use.setAttribute("href", `./flags-sprite.svg#flag-${tile.code}`);
+        use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", `./flags-sprite.svg#flag-${tile.code}`);
+        flag.append(use);
         button.append(flag);
         button.addEventListener("click", () => chooseTile({ row: rowIndex, col: colIndex }));
       }
