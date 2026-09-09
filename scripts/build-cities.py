@@ -22,6 +22,7 @@ DATASET = "cities500"
 TARGET_ROWS_PER_CHUNK = 7000
 MAX_NON_CJK_ALIASES = 24
 MAX_CJK_ALIASES = 12
+BASELINE_COUNT = 69695
 CHINA_REGION_CODES = {"CN", "TW", "HK", "MO"}
 
 CJK_RE = re.compile(r"[\u3400-\u9fff]")
@@ -248,13 +249,6 @@ def bump_client_cache() -> None:
 
 def main() -> None:
     manifest_path = DATA_DIR / "cities-manifest.json"
-    old_count = 0
-    if manifest_path.exists():
-        try:
-            old_count = int(json.loads(manifest_path.read_text(encoding="utf-8")).get("count", 0))
-        except Exception:
-            old_count = 0
-
     rows = load_rows()
     erpel = [row for row in rows if row[2] == "DE" and contains_name(row, "Erpel")]
     if not erpel:
@@ -286,8 +280,8 @@ def main() -> None:
         "license": "CC BY 4.0",
         "updated": now,
         "count": len(rows),
-        "previousCount": old_count,
-        "addedCount": len(rows) - old_count,
+        "previousCount": BASELINE_COUNT,
+        "addedCount": len(rows) - BASELINE_COUNT,
         "displayPolicy": "China-region records prefer Han-script names matched to GeoNames Latin names by Pinyin similarity; Latin/Pinyin names remain searchable aliases",
         "files": filenames,
         "verification": {
