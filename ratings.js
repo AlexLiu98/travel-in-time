@@ -8,7 +8,9 @@
     back: document.getElementById("backLink"), brand: document.getElementById("brandLink"), emptyBack: document.getElementById("emptyBackLink"),
     save: document.getElementById("saveState"), share: document.getElementById("shareBtn"), average: document.getElementById("averageRating"),
     rated: document.getElementById("ratedCount"), cities: document.getElementById("cityCount"), filter: document.getElementById("filterInput"),
-    list: document.getElementById("rankingList"), empty: document.getElementById("emptyState"), toast: document.getElementById("toast")
+    list: document.getElementById("rankingList"), empty: document.getElementById("emptyState"), toast: document.getElementById("toast"),
+    shareDialog: document.getElementById("shareDialog"), sharePreview: document.getElementById("sharePreview"),
+    downloadShare: document.getElementById("downloadShareBtn"), nativeShare: document.getElementById("nativeShareBtn")
   };
 
   let state = { countries: [], cities: [], cityRatings: {} };
@@ -16,6 +18,8 @@
   let cloudReady = false;
   let saveTimer = 0;
   let toastTimer = 0;
+  let shareFile = null;
+  let shareImageUrl = "";
 
   const normalizeRating = value => {
     const rating = Math.round(Number(value) * 2) / 2;
@@ -407,32 +411,47 @@
     return canvas;
   };
 
+  const downloadShareImage = () => {
+    if (!shareFile || !shareImageUrl) return;
+    const link = document.createElement("a");
+    link.href = shareImageUrl;
+    link.download = shareFile.name;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    showToast("图片已保存，请在微信中选择图片或文件发送");
+  };
+
+  const shareWithSystem = async () => {
+    if (!shareFile) return;
+    try {
+      await navigator.share({ files: [shareFile], title: "我的旅行排行榜" });
+    } catch (error) {
+      if (error?.name !== "AbortError") showToast("系统分享不可用，请先保存图片");
+    }
+  };
+
   const shareRanking = () => {
     const canvas = createShareImage();
     if (!canvas) return;
     els.share.disabled = true;
-    canvas.toBlob(async blob => {
+    canvas.toBlob(blob => {
       els.share.disabled = false;
       if (!blob) {
         showToast("分享图片生成失败，请稍后重试");
         return;
       }
       const filename = `我的旅行排行榜-${new Date().toISOString().slice(0, 10)}.png`;
-      const file = new File([blob], filename, { type: "image/png" });
-      try {
-        if (navigator.share && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], title: "我的旅行排行榜" });
-          return;
-        }
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showToast("排行榜图片已保存，可以发送给朋友了");
-      } catch (error) {
-        if (error?.name !== "AbortError") showToast("分享未完成，请再试一次");
+      shareFile = new File([blob], filename, { type: "image/png" });
+      if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
+      shareImageUrl = URL.createObjectURL(blob);
+      els.sharePreview.src = shareImageUrl;
+      const canShareFile = Boolean(navigator.share && navigator.canShare?.({ files: [shareFile] }));
+      els.nativeShare.hidden = !canShareFile;
+      if (typeof els.shareDialog.showModal === "function") {
+        els.shareDialog.showModal();
+      } else {
+        downloadShareImage();
       }
     }, "image/png");
   };
@@ -468,5 +487,13 @@
 
   els.filter.addEventListener("input", render);
   els.share.addEventListener("click", shareRanking);
+  els.downloadShare.addEventListener("click", downloadShareImage);
+  els.nativeShare.addEventListener("click", shareWithSystem);
+  els.shareDialog.addEventListener("close", () => {
+    els.sharePreview.removeAttribute("src");
+    if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
+    shareImageUrl = "";
+    shareFile = null;
+  });
   load();
 })();
