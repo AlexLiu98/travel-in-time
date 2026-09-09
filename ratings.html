@@ -19,7 +19,7 @@
         <span class="save-state" id="saveState"><i></i>评分保存在本机</span>
         <button class="share-button" id="shareBtn" type="button" disabled>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0 4 4m-4-4-4 4M5 14v6h14v-6" /></svg>
-          <b>生成分享图片</b>
+          <b>分享排行榜</b>
         </button>
       </header>
 
@@ -62,6 +62,25 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
-    <script src="./ratings.js?v=4"></script>
+
+    <dialog class="share-dialog" id="shareDialog" aria-labelledby="shareDialogTitle">
+      <div class="share-dialog-card">
+        <div class="share-dialog-head">
+          <div>
+            <p class="eyebrow">SHARE YOUR JOURNEY</p>
+            <h2 id="shareDialogTitle">分享旅行排行榜</h2>
+          </div>
+          <form method="dialog"><button class="share-close" type="submit" aria-label="关闭分享预览">×</button></form>
+        </div>
+        <div class="share-preview"><img id="sharePreview" alt="旅行排行榜分享图片预览" /></div>
+        <p class="share-tip">微信粘贴图片可能显示空白。建议先保存图片，再从微信选择图片或文件发送；手机上也可以长按上方图片保存到相册。</p>
+        <div class="share-actions">
+          <button class="share-save" id="downloadShareBtn" type="button">保存图片（推荐）</button>
+          <button class="share-native" id="nativeShareBtn" type="button">系统分享</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script src="./ratings.js?v=5"></script>
   </body>
 </html>
