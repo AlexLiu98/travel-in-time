@@ -274,14 +274,14 @@ def main() -> None:
     filenames = write_chunks(rows)
     now = datetime.now(timezone.utc).date().isoformat()
     manifest = {
-        "version": 4,
+        "version": 5,
         "source": "GeoNames cities500",
         "license": "CC BY 4.0",
         "updated": now,
         "count": len(rows),
         "previousCount": BASELINE_COUNT,
         "addedCount": len(rows) - BASELINE_COUNT,
-        "displayPolicy": "China-region records prefer Han-script names matched to GeoNames Latin names by Pinyin similarity; Latin/Pinyin names remain searchable aliases",
+        "displayPolicy": "All regions prefer Han-script names when available; China-region names use Pinyin similarity to avoid historical or district-name mismatches; local, Latin, and Pinyin names remain searchable aliases",
         "files": filenames,
         "verification": {
             "Erpel": {
