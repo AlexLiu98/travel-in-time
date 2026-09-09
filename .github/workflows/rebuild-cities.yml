@@ -25,6 +25,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install city-name matcher
+        run: python -m pip install --disable-pip-version-check pypinyin==0.55.0
+
       - name: Rebuild city database
         run: python scripts/build-cities.py
 
@@ -37,5 +40,5 @@ jobs:
             echo "No city database changes to commit."
             exit 0
           fi
-          git commit -m "Expand city database to GeoNames cities500"
+          git commit -m "Use Chinese display names for China city database"
           git push
