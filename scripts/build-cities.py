@@ -6,10 +6,14 @@ import io
 import json
 import re
 import shutil
+import unicodedata
 import urllib.request
 import zipfile
 from datetime import datetime, timezone
+from difflib import SequenceMatcher
 from pathlib import Path
+
+from pypinyin import Style, lazy_pinyin
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = ROOT / "data"
@@ -23,6 +27,7 @@ CHINA_REGION_CODES = {"CN", "TW", "HK", "MO"}
 CJK_RE = re.compile(r"[\u3400-\u9fff]")
 CJK_ONLY_RE = re.compile(r"^[\u3400-\u9fff·•・\-\s]+$")
 URL_RE = re.compile(r"^(?:https?://|www\.)", re.I)
+NON_ALNUM_RE = re.compile(r"[^a-z0-9]+")
 
 
 def download_bytes(url: str) -> bytes:
@@ -56,13 +61,25 @@ def split_raw_aliases(raw: str) -> list[str]:
     return result
 
 
-def chinese_display_name(country: str, original_name: str, raw_aliases: list[str]) -> str:
-    """Prefer a human-readable Han-script place name for China-region records.
+def normalize_latin(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value)
+    ascii_value = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return NON_ALNUM_RE.sub("", ascii_value.casefold())
 
-    GeoNames frequently stores a Pinyin/Latin form in `name`, while the native
-    Chinese spelling is present only in `alternatenames`.  For the Chinese
-    interface we promote the best Han-script alternate name to the primary
-    display name, while keeping the Latin forms searchable as aliases.
+
+def candidate_pinyin(value: str) -> str:
+    return normalize_latin("".join(lazy_pinyin(value, style=Style.NORMAL, errors="ignore")))
+
+
+def chinese_display_name(country: str, original_name: str, ascii_name: str, raw_aliases: list[str]) -> str:
+    """Prefer the Han-script alias that best matches the current GeoNames name.
+
+    GeoNames often uses Pinyin/Latin as the primary name for China. Its alternate
+    names can also contain historical or district names, so choosing the shortest
+    Han alias is unsafe (for example Shenzhen could incorrectly become Bao'an).
+    We transliterate each Han candidate back to Pinyin and choose the one that
+    best matches the current GeoNames Latin name. The original Latin form remains
+    searchable as an alias.
     """
     if country not in CHINA_REGION_CODES:
         return original_name
@@ -77,14 +94,23 @@ def chinese_display_name(country: str, original_name: str, raw_aliases: list[str
     if not candidates:
         return original_name
 
-    # Deduplicate, then prefer ordinary city-name length.  GeoNames commonly
-    # contains both forms such as “北京” and “北京市”; the shorter native form
-    # is the better UI label. Avoid one-character abbreviations when a normal
-    # name is available.
     unique = list(dict.fromkeys(candidates))
     normal = [value for value in unique if len(value.replace(" ", "")) >= 2]
     pool = normal or unique
-    return min(pool, key=lambda value: (len(value.replace(" ", "")), unique.index(value)))
+
+    target = normalize_latin(ascii_name or original_name)
+    if not target:
+        return pool[0]
+
+    def score(value: str) -> tuple[float, float, int, int]:
+        pinyin = candidate_pinyin(value)
+        similarity = SequenceMatcher(None, pinyin, target).ratio() if pinyin else 0.0
+        exact = 1.0 if pinyin == target else 0.0
+        # Prefer exact/near transliterations first, then concise UI labels, then
+        # original GeoNames alias order for deterministic tie-breaking.
+        return (exact, similarity, -len(value.replace(" ", "")), -unique.index(value))
+
+    return max(pool, key=score)
 
 
 def clean_aliases(primary_name: str, ascii_name: str, candidates: list[str]) -> list[str]:
@@ -143,9 +169,7 @@ def load_rows() -> list[list]:
                     continue
 
                 raw_aliases = split_raw_aliases(fields[3])
-                name = chinese_display_name(country, original_name, raw_aliases)
-                # Preserve the original GeoNames name as a searchable alias if
-                # promoting a Chinese display name changed it.
+                name = chinese_display_name(country, original_name, ascii_name, raw_aliases)
                 aliases = clean_aliases(name, ascii_name, [original_name, *raw_aliases])
                 rows.append([
                     name,
@@ -167,13 +191,15 @@ def contains_name(row: list, value: str) -> bool:
     return any(str(item).casefold() == needle for item in [row[0], row[1], *row[8]])
 
 
-def require_chinese_name(rows: list[list], ascii_name: str) -> dict:
+def require_exact_chinese_name(rows: list[list], ascii_name: str, expected: str) -> dict:
     matches = [row for row in rows if row[2] == "CN" and row[1].casefold() == ascii_name.casefold()]
     if not matches:
         raise RuntimeError(f"Verification failed: {ascii_name} was not found in the China city database")
     row = matches[0]
-    if not CJK_RE.search(str(row[0])):
-        raise RuntimeError(f"Verification failed: {ascii_name} still has a non-Chinese display name: {row[0]}")
+    if row[0] != expected:
+        raise RuntimeError(
+            f"Verification failed: {ascii_name} display name is {row[0]!r}, expected {expected!r}"
+        )
     return {"displayName": row[0], "lat": row[4], "lng": row[5]}
 
 
@@ -206,17 +232,17 @@ def bump_client_cache() -> None:
     app = app_path.read_text(encoding="utf-8")
     app = re.sub(
         r'fetch\("\.\/data\/cities-manifest\.json(?:\?v=\d+)?"(?:, \{ cache: "no-store" \})?\)',
-        'fetch("./data/cities-manifest.json?v=4", { cache: "no-store" })',
+        'fetch("./data/cities-manifest.json?v=5", { cache: "no-store" })',
         app,
         count=1,
     )
-    if 'cities-manifest.json?v=4' not in app:
+    if 'cities-manifest.json?v=5' not in app:
         raise RuntimeError("Could not locate city manifest fetch in app.js")
     app_path.write_text(app, encoding="utf-8")
 
     index_path = ROOT / "index.html"
     index = index_path.read_text(encoding="utf-8")
-    index = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=30', index, count=1)
+    index = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=31', index, count=1)
     index_path.write_text(index, encoding="utf-8")
 
 
@@ -234,22 +260,35 @@ def main() -> None:
     if not erpel:
         raise RuntimeError("Verification failed: Erpel was not found in the rebuilt city database")
 
+    expected_china_names = {
+        "Beijing": "北京",
+        "Shanghai": "上海",
+        "Guangzhou": "广州",
+        "Shenzhen": "深圳",
+        "Tianjin": "天津",
+        "Xi'an": "西安",
+        "Wuhan": "武汉",
+        "Chengdu": "成都",
+        "Chongqing": "重庆",
+        "Nanjing": "南京",
+        "Hangzhou": "杭州",
+    }
     china_checks = {
-        city: require_chinese_name(rows, city)
-        for city in ["Beijing", "Shanghai", "Guangzhou", "Shenzhen", "Tianjin", "Xi'an"]
+        city: require_exact_chinese_name(rows, city, expected)
+        for city, expected in expected_china_names.items()
     }
 
     filenames = write_chunks(rows)
     now = datetime.now(timezone.utc).date().isoformat()
     manifest = {
-        "version": 3,
+        "version": 4,
         "source": "GeoNames cities500",
         "license": "CC BY 4.0",
         "updated": now,
         "count": len(rows),
         "previousCount": old_count,
         "addedCount": len(rows) - old_count,
-        "displayPolicy": "China-region records prefer Han-script alternate names; Latin/Pinyin names remain searchable aliases",
+        "displayPolicy": "China-region records prefer Han-script names matched to GeoNames Latin names by Pinyin similarity; Latin/Pinyin names remain searchable aliases",
         "files": filenames,
         "verification": {
             "Erpel": {
