@@ -1,0 +1,41 @@
+name: Rebuild city database
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - scripts/build-cities.py
+      - .github/workflows/rebuild-cities.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Rebuild city database
+        run: python scripts/build-cities.py
+
+      - name: Commit generated city database
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js index.html data/SOURCES.txt data/cities-manifest.json data/cities*.json.gz
+          if git diff --cached --quiet; then
+            echo "No city database changes to commit."
+            exit 0
+          fi
+          git commit -m "Expand city database to GeoNames cities500"
+          git push
