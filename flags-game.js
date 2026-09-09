@@ -1,6 +1,8 @@
 (() => {
   "use strict";
 
+  const accountMode = new URLSearchParams(window.location.search).get("mode") === "account";
+
   const LEVELS = {
     easy: { name: "简单", rows: 4, cols: 6, pairs: 12, seconds: 120 },
     medium: { name: "中等", rows: 6, cols: 8, pairs: 24, seconds: 240 },
@@ -30,6 +32,10 @@
     again: document.getElementById("againBtn"), closeResult: document.getElementById("closeResultBtn"),
     sound: document.getElementById("soundToggle")
   };
+
+  const backHref = accountMode ? "./index.html?mode=account" : "./index.html";
+  [document.getElementById("backLink"), document.getElementById("brandLink")]
+    .forEach(link => { if (link) link.href = backHref; });
 
   let levelKey = "easy";
   let board = [];
