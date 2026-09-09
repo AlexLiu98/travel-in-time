@@ -923,7 +923,7 @@
   async function ensureLocalCities() {
     if (localCities.length) return localCities;
     if (!localCityLoadPromise) {
-      localCityLoadPromise = fetch("./data/cities-manifest.json?v=4", { cache: "no-store" })
+      localCityLoadPromise = fetch("./data/cities-manifest.json?v=5", { cache: "no-store" })
         .then(async response => {
           if (!response.ok) throw new Error("local city manifest unavailable");
           if (!("DecompressionStream" in window)) throw new Error("this browser cannot read the local city data");
