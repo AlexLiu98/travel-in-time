@@ -41,7 +41,16 @@ button { color: inherit; }
 .sound-toggle.muted { color: var(--muted); border-color: var(--line); background: rgba(255,255,255,.025); }
 .sound-toggle.muted span { color: var(--muted); }
 .sound-toggle:disabled { opacity: .4; cursor: default; }
-.game-intro { min-height: 178px; display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: end; padding: 31px 6px 24px; }
+.game-intro {
+  position: relative; overflow: hidden; min-height: 196px; display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: end;
+  margin-top: 20px; padding: 31px 34px; border: 1px solid rgba(255,255,255,.15); border-radius: 24px;
+  background:
+    linear-gradient(90deg, rgba(4,14,24,.96) 0%, rgba(4,14,24,.88) 38%, rgba(4,14,24,.42) 72%, rgba(4,14,24,.2) 100%),
+    linear-gradient(0deg, rgba(4,14,24,.48), transparent 54%),
+    url("./game-hero-cappadocia.jpg") center 56% / cover no-repeat;
+  box-shadow: 0 25px 70px rgba(0,0,0,.25), inset 0 0 60px rgba(4,14,24,.18);
+}
+.game-intro > * { position: relative; z-index: 1; }
 .eyebrow { margin: 0 0 8px; color: var(--cyan); font-size: .68rem; font-weight: 800; letter-spacing: .18em; }
 .game-intro h1 { margin: 0 0 8px; font-family: Georgia, "Times New Roman", serif; font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 500; letter-spacing: -.03em; }
 .game-intro p:last-child { margin: 0; color: var(--muted); font-size: .86rem; }
@@ -272,7 +281,7 @@ dialog > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: .78rem; li
   .header-title strong { font-size: .78rem; }
   .sound-toggle { width: 39px; min-width: 39px; padding: 0; justify-content: center; }
   .sound-toggle b { display: none; }
-  .game-intro { min-height: 0; padding: 23px 3px 18px; }
+  .game-intro { min-height: 0; margin-top: 12px; padding: 23px 17px 18px; border-radius: 18px; background-position: 64% center; }
   .game-intro h1 { font-size: 2rem; }
   .game-intro p:last-child { font-size: .75rem; line-height: 1.5; }
   .best-board article { min-width: 0; padding: 10px; }
