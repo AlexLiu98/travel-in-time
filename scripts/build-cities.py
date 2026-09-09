@@ -73,18 +73,14 @@ def candidate_pinyin(value: str) -> str:
 
 
 def chinese_display_name(country: str, original_name: str, ascii_name: str, raw_aliases: list[str]) -> str:
-    """Prefer the Han-script alias that best matches the current GeoNames name.
+    """Prefer a Han-script label whenever GeoNames provides one.
 
-    GeoNames often uses Pinyin/Latin as the primary name for China. Its alternate
-    names can also contain historical or district names, so choosing the shortest
-    Han alias is unsafe (for example Shenzhen could incorrectly become Bao'an).
-    We transliterate each Han candidate back to Pinyin and choose the one that
-    best matches the current GeoNames Latin name. The original Latin form remains
-    searchable as an alias.
+    For China, GeoNames often uses Pinyin/Latin as the primary name and its
+    alternate names can contain historical or district names. We therefore
+    transliterate each Han candidate back to Pinyin and choose the one that best
+    matches the current GeoNames name. Elsewhere, the first Han-script alias is
+    the localized display label. The original local/Latin forms remain searchable.
     """
-    if country not in CHINA_REGION_CODES:
-        return original_name
-
     candidates: list[str] = []
     if CJK_RE.search(original_name) and CJK_ONLY_RE.match(original_name):
         candidates.append(original_name)
@@ -94,6 +90,9 @@ def chinese_display_name(country: str, original_name: str, ascii_name: str, raw_
 
     if not candidates:
         return original_name
+
+    if country not in CHINA_REGION_CODES:
+        return candidates[0]
 
     unique = list(dict.fromkeys(candidates))
     normal = [value for value in unique if len(value.replace(" ", "")) >= 2]
@@ -233,17 +232,17 @@ def bump_client_cache() -> None:
     app = app_path.read_text(encoding="utf-8")
     app = re.sub(
         r'fetch\("\.\/data\/cities-manifest\.json(?:\?v=\d+)?"(?:, \{ cache: "no-store" \})?\)',
-        'fetch("./data/cities-manifest.json?v=5", { cache: "no-store" })',
+        'fetch("./data/cities-manifest.json?v=6", { cache: "no-store" })',
         app,
         count=1,
     )
-    if 'cities-manifest.json?v=5' not in app:
+    if 'cities-manifest.json?v=6' not in app:
         raise RuntimeError("Could not locate city manifest fetch in app.js")
     app_path.write_text(app, encoding="utf-8")
 
     index_path = ROOT / "index.html"
     index = index_path.read_text(encoding="utf-8")
-    index = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=31', index, count=1)
+    index = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=32', index, count=1)
     index_path.write_text(index, encoding="utf-8")
 
 

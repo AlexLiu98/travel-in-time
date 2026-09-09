@@ -7,6 +7,7 @@ Boundary data sources
 - ISO alpha-2/alpha-3 mapping: country-data package (MIT License).
   https://www.npmjs.com/package/country-data
 - City search and map labels: GeoNames cities500 dataset (CC BY 4.0).
+  Han-script names are preferred for display when available; local and Latin names remain searchable.
   https://download.geonames.org/export/dump/
 - Leaflet 1.9.4 is bundled locally (BSD 2-Clause License).
   https://leafletjs.com/

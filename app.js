@@ -104,6 +104,14 @@
     return CITY_NAME_ALIASES[String(countryCode || "").toUpperCase()]?.[key] || simplified;
   }
 
+  function preferredCityDisplayName(row, countryCode) {
+    const fallback = row[0] || row[1] || "";
+    const chineseName = [fallback, ...(row[8] || [])]
+      .map(toSimplified)
+      .find(value => /[\u3400-\u9fff]/.test(value) && /^[\u3400-\u9fff·•・\-\s]+$/.test(value));
+    return localizeCityName(chineseName || fallback, countryCode);
+  }
+
   function localizeRegionName(value, countryCode) {
     const simplified = toSimplified(value);
     return REGION_NAME_ALIASES[String(countryCode || "").toUpperCase()]?.[simplified] || simplified;
@@ -923,7 +931,7 @@
   async function ensureLocalCities() {
     if (localCities.length) return localCities;
     if (!localCityLoadPromise) {
-      localCityLoadPromise = fetch("./data/cities-manifest.json?v=5", { cache: "no-store" })
+      localCityLoadPromise = fetch("./data/cities-manifest.json?v=6", { cache: "no-store" })
         .then(async response => {
           if (!response.ok) throw new Error("local city manifest unavailable");
           if (!("DecompressionStream" in window)) throw new Error("this browser cannot read the local city data");
@@ -940,7 +948,7 @@
           localCities = rows.map(row => {
             const originalCountryCode = String(row[2] || "").toUpperCase();
             const countryCode = normalizeCountryCode(originalCountryCode);
-            const name = localizeCityName(toSimplified(row[0] || row[1]), originalCountryCode);
+            const name = preferredCityDisplayName(row, originalCountryCode);
             const searchKeys = [...new Set([name, row[1], ...(row[8] || [])]
               .map(rawSearchNormalized)
               .filter(Boolean))];
