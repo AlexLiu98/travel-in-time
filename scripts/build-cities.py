@@ -232,17 +232,17 @@ def bump_client_cache() -> None:
     app = app_path.read_text(encoding="utf-8")
     app = re.sub(
         r'fetch\("\.\/data\/cities-manifest\.json(?:\?v=\d+)?"(?:, \{ cache: "no-store" \})?\)',
-        'fetch("./data/cities-manifest.json?v=6", { cache: "no-store" })',
+        'fetch("./data/cities-manifest.json?v=7", { cache: "no-store" })',
         app,
         count=1,
     )
-    if 'cities-manifest.json?v=6' not in app:
+    if 'cities-manifest.json?v=7' not in app:
         raise RuntimeError("Could not locate city manifest fetch in app.js")
     app_path.write_text(app, encoding="utf-8")
 
     index_path = ROOT / "index.html"
     index = index_path.read_text(encoding="utf-8")
-    index = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=32', index, count=1)
+    index = re.sub(r'\.\/app\.js\?v=\d+', './app.js?v=33', index, count=1)
     index_path.write_text(index, encoding="utf-8")
 
 

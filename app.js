@@ -70,6 +70,7 @@
   let chinaProvincesData = null;
   let countryCodeMap = {};
   let localCities = [];
+  let localCityBuckets = new Map();
   let localCityLoadPromise = null;
   let extremeCities = {};
   let pendingMarker = null;
@@ -928,46 +929,77 @@
     return true;
   }
 
+  function yieldToBrowser() {
+    return new Promise(resolve => window.setTimeout(resolve, 0));
+  }
+
+  function cityBucketKey(latIndex, lngIndex) {
+    return `${latIndex}:${lngIndex}`;
+  }
+
+  function addCityToBucket(buckets, city) {
+    const key = cityBucketKey(Math.floor(city.lat), normalizeLongitudeIndex(Math.floor(city.lng)));
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(city);
+    else buckets.set(key, [city]);
+  }
+
+  function createLocalCity(row) {
+    const originalCountryCode = String(row[2] || "").toUpperCase();
+    const countryCode = normalizeCountryCode(originalCountryCode);
+    const name = preferredCityDisplayName(row, originalCountryCode);
+    const searchKeys = [...new Set([name, row[1], ...(row[8] || [])]
+      .map(rawSearchNormalized)
+      .filter(Boolean))];
+    return {
+      name,
+      originalName: row[1] || name,
+      countryCode,
+      countryName: getCountryName(countryCode),
+      region: localizeRegionName(row[3] || "", originalCountryCode),
+      lat: Number(row[4]),
+      lng: Number(row[5]),
+      population: Number(row[6] || 0),
+      featureCode: row[7] || "",
+      searchKeys,
+      searchText: searchKeys.join("|")
+    };
+  }
+
+  async function loadLocalCityData() {
+    const response = await fetch("./data/cities-manifest.json?v=7", { cache: "no-store" });
+    if (!response.ok) throw new Error("local city manifest unavailable");
+    if (!("DecompressionStream" in window)) throw new Error("this browser cannot read the local city data");
+    const manifest = await response.json();
+    const chunkResponses = await Promise.all((manifest.files || []).map(async filename => {
+      const chunkResponse = await fetch(`./data/${filename}`);
+      if (!chunkResponse.ok || !chunkResponse.body) throw new Error("local city data unavailable");
+      return chunkResponse;
+    }));
+    const cities = [];
+    const buckets = new Map();
+    for (const chunkResponse of chunkResponses) {
+      const stream = chunkResponse.body.pipeThrough(new DecompressionStream("gzip"));
+      const rows = await new Response(stream).json();
+      for (let start = 0; start < rows.length; start += 600) {
+        rows.slice(start, start + 600).forEach(row => {
+          const city = createLocalCity(row);
+          if (!city.name || !Number.isFinite(city.lat) || !Number.isFinite(city.lng)) return;
+          cities.push(city);
+          addCityToBucket(buckets, city);
+        });
+        await yieldToBrowser();
+      }
+    }
+    localCities = cities;
+    localCityBuckets = buckets;
+    return localCities;
+  }
+
   async function ensureLocalCities() {
     if (localCities.length) return localCities;
     if (!localCityLoadPromise) {
-      localCityLoadPromise = fetch("./data/cities-manifest.json?v=6", { cache: "no-store" })
-        .then(async response => {
-          if (!response.ok) throw new Error("local city manifest unavailable");
-          if (!("DecompressionStream" in window)) throw new Error("this browser cannot read the local city data");
-          const manifest = await response.json();
-          const chunks = await Promise.all((manifest.files || []).map(async filename => {
-            const chunkResponse = await fetch(`./data/${filename}`);
-            if (!chunkResponse.ok || !chunkResponse.body) throw new Error("local city data unavailable");
-            const stream = chunkResponse.body.pipeThrough(new DecompressionStream("gzip"));
-            return new Response(stream).json();
-          }));
-          return chunks.flat();
-        })
-        .then(rows => {
-          localCities = rows.map(row => {
-            const originalCountryCode = String(row[2] || "").toUpperCase();
-            const countryCode = normalizeCountryCode(originalCountryCode);
-            const name = preferredCityDisplayName(row, originalCountryCode);
-            const searchKeys = [...new Set([name, row[1], ...(row[8] || [])]
-              .map(rawSearchNormalized)
-              .filter(Boolean))];
-            return {
-              name,
-              originalName: row[1] || name,
-              countryCode,
-              countryName: getCountryName(countryCode),
-              region: localizeRegionName(row[3] || "", originalCountryCode),
-              lat: Number(row[4]),
-              lng: Number(row[5]),
-              population: Number(row[6] || 0),
-              featureCode: row[7] || "",
-              searchKeys,
-              searchText: searchKeys.join("|")
-            };
-          }).filter(city => city.name && Number.isFinite(city.lat) && Number.isFinite(city.lng));
-          return localCities;
-        })
+      localCityLoadPromise = loadLocalCityData()
         .catch(error => {
           localCityLoadPromise = null;
           throw error;
@@ -1094,6 +1126,39 @@
     return 6371 * 2 * Math.atan2(Math.sqrt(value), Math.sqrt(1 - value));
   }
 
+  function normalizeLongitudeIndex(index) {
+    return ((index + 180) % 360 + 360) % 360 - 180;
+  }
+
+  function findNearestLocalCity(lat, lng, maxDistance, chinaOnly) {
+    const latitudeRadius = maxDistance / 111.32;
+    const furthestLatitude = Math.min(89.9, Math.abs(lat) + latitudeRadius);
+    const longitudeRadius = Math.min(180, maxDistance / (111.32 * Math.max(.01, Math.cos(furthestLatitude * Math.PI / 180))));
+    const minLatIndex = Math.max(-90, Math.floor(lat - latitudeRadius));
+    const maxLatIndex = Math.min(89, Math.floor(lat + latitudeRadius));
+    const minLngIndex = longitudeRadius >= 180 ? -180 : Math.floor(lng - longitudeRadius);
+    const maxLngIndex = longitudeRadius >= 180 ? 179 : Math.floor(lng + longitudeRadius);
+    const visitedKeys = new Set();
+    let candidate = null;
+    let nearestDistance = Infinity;
+    for (let latIndex = minLatIndex; latIndex <= maxLatIndex; latIndex += 1) {
+      for (let rawLngIndex = minLngIndex; rawLngIndex <= maxLngIndex; rawLngIndex += 1) {
+        const key = cityBucketKey(latIndex, normalizeLongitudeIndex(rawLngIndex));
+        if (visitedKeys.has(key)) continue;
+        visitedKeys.add(key);
+        (localCityBuckets.get(key) || []).forEach(city => {
+          if (chinaOnly && !isChinaPlace(city)) return;
+          const distance = distanceKm(lat, lng, city.lat, city.lng);
+          if (distance < nearestDistance) {
+            nearestDistance = distance;
+            candidate = city;
+          }
+        });
+      }
+    }
+    return { candidate, nearestDistance };
+  }
+
   async function handleMapClick(event) {
     if (!map) return;
     clearPendingMapSelection({ clearInput: true });
@@ -1111,19 +1176,15 @@
       clearPendingMapSelection({ clearInput: true, announce: true });
     });
     try {
-      const cities = await ensureLocalCities();
+      await ensureLocalCities();
       if (lookupId !== pendingLookupId || !pendingMarker) return;
-      const available = currentView === "china" ? cities.filter(isChinaPlace) : cities;
-      let candidate = null;
-      let nearestDistance = Infinity;
-      available.forEach(city => {
-        const distance = distanceKm(event.latlng.lat, event.latlng.lng, city.lat, city.lng);
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          candidate = city;
-        }
-      });
       const maxDistance = map.getZoom() >= 8 ? 45 : map.getZoom() >= 5 ? 160 : 500;
+      const { candidate, nearestDistance } = findNearestLocalCity(
+        event.latlng.lat,
+        event.latlng.lng,
+        maxDistance,
+        currentView === "china"
+      );
       if (!candidate || nearestDistance > maxDistance) {
         els.searchStatus.textContent = "附近没有匹配到城市，请在右侧输入城市名称搜索。";
         return;
@@ -1261,9 +1322,16 @@
     bindCompassMotion();
   }
 
+  function scheduleLocalCityPreload() {
+    const preload = () => ensureLocalCities().catch(() => {});
+    if ("requestIdleCallback" in window) window.requestIdleCallback(preload, { timeout: 1200 });
+    else window.setTimeout(preload, 450);
+  }
+
   populateCountries();
   bindEvents();
   render();
   initMap();
+  scheduleLocalCityPreload();
   connectAccount();
 })();
