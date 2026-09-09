@@ -51,6 +51,8 @@
   let toastId = 0;
   let runId = 0;
   let audioContext = null;
+  let masterGain = null;
+  let audioLimiter = null;
   let bgmTimer = 0;
   let bgmStep = 0;
   let soundEnabled = localStorage.getItem(AUDIO_KEY) !== "off";
@@ -63,10 +65,23 @@
     587.33, 698.46, 783.99, 659.25
   ];
   const BGM_BASS = [130.81, 146.83, 164.81, 146.83];
+  const MASTER_VOLUME = 2.4;
 
   const ensureAudio = () => {
     if (!soundEnabled || !AudioContextClass) return null;
-    if (!audioContext) audioContext = new AudioContextClass();
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+      masterGain = audioContext.createGain();
+      masterGain.gain.value = MASTER_VOLUME;
+      audioLimiter = audioContext.createDynamicsCompressor();
+      audioLimiter.threshold.value = -12;
+      audioLimiter.knee.value = 18;
+      audioLimiter.ratio.value = 4;
+      audioLimiter.attack.value = .005;
+      audioLimiter.release.value = .18;
+      masterGain.connect(audioLimiter);
+      audioLimiter.connect(audioContext.destination);
+    }
     if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
     return audioContext;
   };
@@ -83,7 +98,7 @@
     gain.gain.exponentialRampToValueAtTime(volume, start + .018);
     gain.gain.exponentialRampToValueAtTime(.0001, start + duration);
     oscillator.connect(gain);
-    gain.connect(context.destination);
+    gain.connect(masterGain);
     oscillator.start(start);
     oscillator.stop(start + duration + .03);
   };
