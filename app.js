@@ -230,7 +230,7 @@
   }
 
   function configureAccountUI() {
-    if (els.flagsEntry) els.flagsEntry.href = accountMode ? "./flags.html?mode=account" : "./flags.html";
+    if (els.flagsEntry) els.flagsEntry.href = accountMode ? "./flags.html?v=11&mode=account" : "./flags.html?v=11";
     if (els.ratingsEntry) els.ratingsEntry.href = accountMode ? "./ratings.html?v=5&mode=account" : "./ratings.html?v=5";
     if (!els.accountButton) return;
     if (accountMode) {
