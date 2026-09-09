@@ -230,8 +230,8 @@
   }
 
   function configureAccountUI() {
-    if (els.flagsEntry) els.flagsEntry.href = accountMode ? "./flags.html?v=11&mode=account" : "./flags.html?v=11";
-    if (els.ratingsEntry) els.ratingsEntry.href = accountMode ? "./ratings.html?v=5&mode=account" : "./ratings.html?v=5";
+    if (els.flagsEntry) els.flagsEntry.href = accountMode ? "./flags.html?v=12&mode=account" : "./flags.html?v=12";
+    if (els.ratingsEntry) els.ratingsEntry.href = accountMode ? "./ratings.html?v=6&mode=account" : "./ratings.html?v=6";
     if (!els.accountButton) return;
     if (accountMode) {
       els.accountButton.textContent = "退出";
