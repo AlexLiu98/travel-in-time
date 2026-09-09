@@ -40,8 +40,16 @@ button { color: inherit; }
 .share-button b { font-size: .72rem; }
 .share-button:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
 .share-button:disabled { opacity: .42; cursor: default; }
-.ranking-hero { position: relative; overflow: hidden; min-height: 245px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 30px; margin-top: 20px; padding: 31px 34px; border: 1px solid rgba(255,255,255,.15); border-radius: 24px; background: linear-gradient(120deg, rgba(14,35,56,.96), rgba(7,19,32,.92)); box-shadow: 0 25px 70px rgba(0,0,0,.25); }
-.ranking-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 76% 20%, rgba(211,166,77,.16), transparent 16rem), linear-gradient(90deg, transparent 0 74%, rgba(80,215,209,.04)); }
+.ranking-hero {
+  position: relative; overflow: hidden; min-height: 245px; display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 30px; margin-top: 20px; padding: 31px 34px;
+  border: 1px solid rgba(255,255,255,.15); border-radius: 24px;
+  background:
+    linear-gradient(90deg, rgba(5,16,28,.97) 0%, rgba(5,16,28,.9) 40%, rgba(5,16,28,.44) 72%, rgba(5,16,28,.2) 100%),
+    linear-gradient(0deg, rgba(5,16,28,.54), transparent 58%),
+    url("./ranking-hero-coast.jpg") center 52% / cover no-repeat;
+  box-shadow: 0 25px 70px rgba(0,0,0,.25), inset 0 0 65px rgba(5,16,28,.18);
+}
+.ranking-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 80% 18%, rgba(211,166,77,.12), transparent 16rem), linear-gradient(90deg, transparent 0 76%, rgba(80,215,209,.035)); }
 .ranking-hero::after { content: ""; position: absolute; width: 320px; height: 320px; right: -90px; top: -150px; border: 1px solid rgba(211,166,77,.2); border-radius: 50%; box-shadow: 0 0 0 28px rgba(211,166,77,.035), 0 0 0 58px rgba(80,215,209,.025); }
 .hero-copy, .summary-grid, .hero-medallion { position: relative; z-index: 1; }
 .eyebrow { margin: 0 0 8px; color: var(--cyan); font-size: .7rem; font-weight: 800; letter-spacing: .18em; }
@@ -145,7 +153,7 @@ button { color: inherit; }
   .brand-gem { width: 36px; height: 36px; }
   .share-button { width: 40px; min-width: 40px; padding: 0; justify-content: center; }
   .share-button b { display: none; }
-  .ranking-hero { grid-template-columns: 1fr; margin-top: 12px; padding: 23px 17px 17px; border-radius: 18px; }
+  .ranking-hero { grid-template-columns: 1fr; margin-top: 12px; padding: 23px 17px 17px; border-radius: 18px; background-position: 66% center; }
   .hero-copy { padding-right: 0; }
   .hero-copy h1 { font-size: 2.25rem; }
   .hero-medallion { display: none; }
