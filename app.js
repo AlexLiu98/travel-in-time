@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "travel-footprint-v1";
   const SOVEREIGN_COUNT = 195;
+  const WORLD_BOUNDARY_URL = "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_50m_admin_0_countries.geojson";
   const ISO_CODES = "AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BV BR IO BN BG BF BI CV KH CM CA KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CW CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM VA HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RU RW BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO ZA GS SS ES LK SD SR SJ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VE VN VG VI WF EH YE ZM ZW XK".split(" ");
   const FALLBACK_NAMES = { CN: "中国", DE: "德国", IT: "意大利", FR: "法国", GB: "英国", US: "美国", XK: "科索沃" };
   const CITY_NAME_ALIASES = {
@@ -69,6 +70,8 @@
   let worldCountriesData = null;
   let chinaProvincesData = null;
   let countryCodeMap = {};
+  let worldCountryHitAreas = [];
+  let worldBoundaryLoadPromise = null;
   let localCities = [];
   let localCityBuckets = new Map();
   let localCityLoadPromise = null;
@@ -131,6 +134,7 @@
 
   function normalizeCountryCode(code) {
     const upper = String(code || "").toUpperCase();
+    if (upper === "SJ") return "NO";
     return CHINA_REGION_CODES.has(upper) ? "CN" : upper;
   }
 
@@ -353,7 +357,7 @@
 
   function populateCountries() {
     const countries = ISO_CODES
-      .filter(code => !["TW", "HK", "MO"].includes(code))
+      .filter(code => !["TW", "HK", "MO", "SJ"].includes(code))
       .map(code => ({ code, name: getCountryName(code) }))
       .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
     [els.countrySelect, els.cityCountrySelect].forEach((select, index) => {
@@ -394,18 +398,75 @@
     map.on("click", handleMapClick);
     applyMapScope();
     renderMarkers();
-    loadMapBoundaryData();
+    worldBoundaryLoadPromise = loadMapBoundaryData();
+  }
+
+  async function fetchJson(url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`data unavailable: ${url}`);
+    return response.json();
+  }
+
+  async function loadWorldCountries() {
+    try {
+      return await fetchJson(WORLD_BOUNDARY_URL);
+    } catch {
+      return fetchJson("./data/world-countries.geo.json");
+    }
+  }
+
+  function normalizeWorldCountries(data) {
+    const alpha3ToAlpha2 = new Map(
+      Object.entries(countryCodeMap).map(([alpha2, alpha3]) => [alpha3, normalizeCountryCode(alpha2)])
+    );
+    return {
+      ...data,
+      features: (data.features || []).map(feature => {
+        const properties = feature.properties || {};
+        const id = properties.ADM0_A3 || feature.id;
+        const sourceCode = properties.ISO_A2_EH || properties.ISO_A2;
+        const countryCode = normalizeCountryCode(
+          sourceCode && sourceCode !== "-99" ? sourceCode : alpha3ToAlpha2.get(id)
+        );
+        return { ...feature, id, properties: { ...properties, countryCode } };
+      })
+    };
+  }
+
+  function geometryLatitudeBounds(geometry) {
+    let min = 90;
+    let max = -90;
+    const visit = value => {
+      if (!Array.isArray(value)) return;
+      if (typeof value[0] === "number" && typeof value[1] === "number") {
+        min = Math.min(min, value[1]);
+        max = Math.max(max, value[1]);
+        return;
+      }
+      value.forEach(visit);
+    };
+    visit(geometry?.coordinates);
+    return [min, max];
+  }
+
+  function prepareWorldCountryHitAreas() {
+    worldCountryHitAreas = (worldCountriesData?.features || []).map(feature => {
+      const [minLat, maxLat] = geometryLatitudeBounds(feature.geometry);
+      return { feature, minLat, maxLat };
+    });
   }
 
   async function loadMapBoundaryData() {
     try {
-      const responses = await Promise.all([
-        fetch("./data/world-countries.geo.json"),
-        fetch("./data/china-provinces.geo.json"),
-        fetch("./data/country-code-map.json")
+      const [rawWorldCountries, provinces, codeMap] = await Promise.all([
+        loadWorldCountries(),
+        fetchJson("./data/china-provinces.geo.json"),
+        fetchJson("./data/country-code-map.json")
       ]);
-      if (responses.some(response => !response.ok)) throw new Error("boundary data unavailable");
-      [worldCountriesData, chinaProvincesData, countryCodeMap] = await Promise.all(responses.map(response => response.json()));
+      chinaProvincesData = provinces;
+      countryCodeMap = codeMap;
+      worldCountriesData = normalizeWorldCountries(rawWorldCountries);
+      prepareWorldCountryHitAreas();
       hydrateCountryCoordinatesFromBoundaries();
       render();
     } catch { /* the base map remains usable without boundary overlays */ }
@@ -416,8 +477,7 @@
     let changed = false;
     state.countries.forEach(country => {
       if (Number.isFinite(country.lat) && Number.isFinite(country.lng)) return;
-      const alpha3 = countryCodeMap[country.code];
-      const feature = worldCountriesData.features.find(item => item.id === alpha3);
+      const feature = worldCountriesData.features.find(item => item.properties?.countryCode === country.code);
       if (!feature) return;
       const center = L.geoJSON(feature).getBounds().getCenter();
       country.lat = center.lat;
@@ -526,13 +586,12 @@
     if (!worldCountriesData || !chinaProvincesData) return;
 
     if (currentView === "world") {
-      const visited = new Set(state.countries.map(country => countryCodeMap[country.code]).filter(Boolean));
-      if (visited.has("CHN")) visited.add("TWN");
+      const visited = new Set(state.countries.map(country => normalizeCountryCode(country.code)));
       worldBoundaryLayer = L.geoJSON(worldCountriesData, {
         pane: "mapBoundaryPane",
         interactive: false,
         style: feature => {
-          const highlighted = visited.has(feature.id);
+          const highlighted = visited.has(feature.properties?.countryCode);
           return {
             color: highlighted ? "#50dedb" : "#8ba2b8",
             weight: highlighted ? 1.8 : 0.75,
@@ -1130,7 +1189,51 @@
     return ((index + 180) % 360 + 360) % 360 - 180;
   }
 
-  function findNearestLocalCity(lat, lng, maxDistance, chinaOnly) {
+  function longitudeNear(value, reference) {
+    let adjusted = Number(value);
+    while (adjusted - reference > 180) adjusted -= 360;
+    while (adjusted - reference < -180) adjusted += 360;
+    return adjusted;
+  }
+
+  function pointInRing(lat, lng, ring) {
+    let inside = false;
+    for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+      const currentPoint = ring[index];
+      const previousPoint = ring[previous];
+      const currentLng = longitudeNear(currentPoint[0], lng);
+      const previousLng = longitudeNear(previousPoint[0], lng);
+      const currentLat = currentPoint[1];
+      const previousLat = previousPoint[1];
+      const crossesLatitude = (currentLat > lat) !== (previousLat > lat);
+      if (crossesLatitude
+        && lng < (previousLng - currentLng) * (lat - currentLat) / (previousLat - currentLat) + currentLng) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function pointInGeometry(lat, lng, geometry) {
+    if (!geometry) return false;
+    const polygons = geometry.type === "Polygon" ? [geometry.coordinates] : geometry.coordinates;
+    return (polygons || []).some(polygon => {
+      if (!polygon?.length || !pointInRing(lat, lng, polygon[0])) return false;
+      return !polygon.slice(1).some(hole => pointInRing(lat, lng, hole));
+    });
+  }
+
+  function findCountryCodeAtPoint(lat, lng) {
+    if (currentView === "china") {
+      return chinaProvincesData?.features?.some(feature => pointInGeometry(lat, lng, feature.geometry)) ? "CN" : "";
+    }
+    const match = worldCountryHitAreas.find(area => (
+      lat >= area.minLat && lat <= area.maxLat && pointInGeometry(lat, lng, area.feature.geometry)
+    ));
+    return match?.feature?.properties?.countryCode || "";
+  }
+
+  function findNearestLocalCity(lat, lng, maxDistance, chinaOnly, countryCode = "") {
     const latitudeRadius = maxDistance / 111.32;
     const furthestLatitude = Math.min(89.9, Math.abs(lat) + latitudeRadius);
     const longitudeRadius = Math.min(180, maxDistance / (111.32 * Math.max(.01, Math.cos(furthestLatitude * Math.PI / 180))));
@@ -1148,6 +1251,7 @@
         visitedKeys.add(key);
         (localCityBuckets.get(key) || []).forEach(city => {
           if (chinaOnly && !isChinaPlace(city)) return;
+          if (countryCode && city.countryCode !== countryCode) return;
           const distance = distanceKm(lat, lng, city.lat, city.lng);
           if (distance < nearestDistance) {
             nearestDistance = distance;
@@ -1166,16 +1270,23 @@
     const lookupId = ++pendingLookupId;
     els.searchStatus.textContent = "正在识别地图位置…";
     els.searchResults.replaceChildren();
-    pendingMarker = L.marker(event.latlng, {
-      icon: pendingIcon(),
-      zIndexOffset: 600,
-      bubblingMouseEvents: false
-    }).addTo(map);
-    pendingMarker.on("click", markerEvent => {
-      if (markerEvent.originalEvent) L.DomEvent.stopPropagation(markerEvent.originalEvent);
-      clearPendingMapSelection({ clearInput: true, announce: true });
-    });
     try {
+      if (worldBoundaryLoadPromise) await worldBoundaryLoadPromise;
+      if (lookupId !== pendingLookupId) return;
+      const clickedCountryCode = findCountryCodeAtPoint(event.latlng.lat, event.latlng.lng);
+      if (!clickedCountryCode) {
+        els.searchStatus.textContent = "海洋区域未选择任何地点，请点击陆地城市。";
+        return;
+      }
+      pendingMarker = L.marker(event.latlng, {
+        icon: pendingIcon(),
+        zIndexOffset: 600,
+        bubblingMouseEvents: false
+      }).addTo(map);
+      pendingMarker.on("click", markerEvent => {
+        if (markerEvent.originalEvent) L.DomEvent.stopPropagation(markerEvent.originalEvent);
+        clearPendingMapSelection({ clearInput: true, announce: true });
+      });
       await ensureLocalCities();
       if (lookupId !== pendingLookupId || !pendingMarker) return;
       const maxDistance = map.getZoom() >= 8 ? 45 : map.getZoom() >= 5 ? 160 : 500;
@@ -1183,7 +1294,8 @@
         event.latlng.lat,
         event.latlng.lng,
         maxDistance,
-        currentView === "china"
+        currentView === "china",
+        clickedCountryCode
       );
       if (!candidate || nearestDistance > maxDistance) {
         els.searchStatus.textContent = "附近没有匹配到城市，请在右侧输入城市名称搜索。";
