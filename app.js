@@ -67,6 +67,7 @@
   let worldBoundaryLayer = null;
   let chinaProvinceLayer = null;
   let chinaLabelLayer = null;
+  let mapBoundaryRenderer = null;
   let worldCountriesData = null;
   let chinaProvincesData = null;
   let countryCodeMap = {};
@@ -386,6 +387,7 @@
     map.createPane("mapBoundaryPane");
     map.getPane("mapBoundaryPane").style.zIndex = "230";
     map.getPane("mapBoundaryPane").style.pointerEvents = "none";
+    mapBoundaryRenderer = L.canvas({ pane: "mapBoundaryPane", padding: .5, tolerance: 3 });
     map.attributionControl.setPrefix(false);
     map.attributionControl.addAttribution('城市数据 &copy; <a href="https://www.geonames.org/" target="_blank" rel="noreferrer">GeoNames</a>');
     baseTileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -589,6 +591,8 @@
       const visited = new Set(state.countries.map(country => normalizeCountryCode(country.code)));
       worldBoundaryLayer = L.geoJSON(worldCountriesData, {
         pane: "mapBoundaryPane",
+        renderer: mapBoundaryRenderer,
+        smoothFactor: 1.2,
         interactive: false,
         style: feature => {
           const highlighted = visited.has(feature.properties?.countryCode);
@@ -607,6 +611,8 @@
     if (!map.hasLayer(chinaTileLayer)) chinaTileLayer.addTo(map);
     chinaProvinceLayer = L.geoJSON(chinaProvincesData, {
       pane: "mapBoundaryPane",
+      renderer: mapBoundaryRenderer,
+      smoothFactor: 1.2,
       interactive: false,
       style: { color: "#176f82", weight: 1.45, opacity: 1, fillColor: "#49d6d1", fillOpacity: 0.1 }
     }).addTo(map);
