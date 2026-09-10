@@ -3,7 +3,12 @@
 
   const STORAGE_KEY = "travel-footprint-v1";
   const SOVEREIGN_COUNT = 195;
-  const WORLD_BOUNDARY_URL = "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_50m_admin_0_countries.geojson";
+  const WORLD_BOUNDARY_URL = "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_50m_admin_0_map_units.geojson";
+  const WORLD_HIT_BOUNDARY_URL = "https://cdn.jsdelivr.net/gh/nvkelso/natural-earth-vector@ca96624a56bd078437bca8184e78163e5039ad19/geojson/ne_10m_admin_0_map_units.geojson";
+  const MAP_FEATURE_COUNTRY_CODES = { SOL: "SO", CYN: "CY" };
+  const FALLBACK_LAND_AREAS = [
+    { minLat: 36.09, maxLat: 36.17, minLng: -5.39, maxLng: -5.32, countryCode: "GI" }
+  ];
   const ISO_CODES = "AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE BZ BJ BM BT BO BQ BA BW BV BR IO BN BG BF BI CV KH CM CA KY CF TD CL CN CX CC CO KM CG CD CK CR CI HR CU CW CY CZ DK DJ DM DO EC EG SV GQ ER EE SZ ET FK FO FJ FI FR GF PF TF GA GM GE DE GH GI GR GL GD GP GU GT GG GN GW GY HT HM VA HN HK HU IS IN ID IR IQ IE IM IL IT JM JP JE JO KZ KE KI KP KR KW KG LA LV LB LS LR LY LI LT LU MO MG MW MY MV ML MT MH MQ MR MU YT MX FM MD MC MN ME MS MA MZ MM NA NR NP NL NC NZ NI NE NG NU NF MK MP NO OM PK PW PS PA PG PY PE PH PN PL PT PR QA RE RO RU RW BL SH KN LC MF PM VC WS SM ST SA SN RS SC SL SG SX SK SI SB SO ZA GS SS ES LK SD SR SJ SE CH SY TW TJ TZ TH TL TG TK TO TT TN TR TM TC TV UG UA AE GB US UM UY UZ VU VE VN VG VI WF EH YE ZM ZW XK".split(" ");
   const FALLBACK_NAMES = { CN: "中国", DE: "德国", IT: "意大利", FR: "法国", GB: "英国", US: "美国", XK: "科索沃" };
   const CITY_NAME_ALIASES = {
@@ -19,6 +24,39 @@
     PL: { zakopane: "扎科帕内", "札科帕内": "扎科帕内" }
   };
   const REGION_NAME_ALIASES = {
+    CN: {
+      Anhui: "安徽省",
+      Beijing: "北京市",
+      Chongqing: "重庆市",
+      Fujian: "福建省",
+      Gansu: "甘肃省",
+      Guangdong: "广东省",
+      Guangxi: "广西壮族自治区",
+      Guizhou: "贵州省",
+      Hainan: "海南省",
+      Hebei: "河北省",
+      Heilongjiang: "黑龙江省",
+      Henan: "河南省",
+      Hubei: "湖北省",
+      Hunan: "湖南省",
+      "Inner Mongolia": "内蒙古自治区",
+      Jiangsu: "江苏省",
+      Jiangxi: "江西省",
+      Jilin: "吉林省",
+      Liaoning: "辽宁省",
+      Ningxia: "宁夏回族自治区",
+      Qinghai: "青海省",
+      Shaanxi: "陕西省",
+      Shandong: "山东省",
+      Shanghai: "上海市",
+      Shanxi: "山西省",
+      Sichuan: "四川省",
+      Tianjin: "天津市",
+      Tibet: "西藏自治区",
+      Xinjiang: "新疆维吾尔自治区",
+      Yunnan: "云南省",
+      Zhejiang: "浙江省"
+    },
     DE: {
       "Baden-Wurttemberg": "巴登-符腾堡州",
       Bavaria: "巴伐利亚州",
@@ -36,7 +74,17 @@
       "Saxony-Anhalt": "萨克森-安哈尔特州",
       "Schleswig-Holstein": "石勒苏益格-荷尔斯泰因州",
       Thuringia: "图林根州"
-    }
+    },
+    TW: { Taiwan: "台湾省", Taipei: "台北市", Fukien: "福建省", Takao: "高雄市" },
+    HK: {
+      "Eastern District": "东区", "Kowloon City": "九龙城区", "Wong Tai Sin District": "黄大仙区",
+      "Sham Shui Po District": "深水埗区", "Southern District": "南区", "Sha Tin": "沙田区",
+      "Yau Tsim Mong District": "油尖旺区", "Central and Western": "中西区", "Yuen Long": "元朗区",
+      Islands: "离岛区", "Tuen Mun": "屯门区", "Tsuen Wan": "荃湾区", "Tai Po": "大埔区",
+      "Kwun Tong District": "观塘区", "Sai Kung District": "西贡区", "Kwai Tsing District": "葵青区",
+      "Wan Chai": "湾仔区", "North District": "北区"
+    },
+    MO: { "Saint Francis Xavier": "圣方济各堂区", "Our Lady of Carmo": "嘉模堂区" }
   };
   const CITY_SEARCH_ALIASES = {
     "维也纳": "Wien",
@@ -75,6 +123,7 @@
   let worldBoundaryLoadPromise = null;
   let localCities = [];
   let localCityBuckets = new Map();
+  let localCitiesByCountry = new Map();
   let localCityLoadPromise = null;
   let extremeCities = {};
   let pendingMarker = null;
@@ -417,6 +466,14 @@
     }
   }
 
+  async function loadWorldHitCountries() {
+    try {
+      return await fetchJson(WORLD_HIT_BOUNDARY_URL);
+    } catch {
+      return null;
+    }
+  }
+
   function normalizeWorldCountries(data) {
     const alpha3ToAlpha2 = new Map(
       Object.entries(countryCodeMap).map(([alpha2, alpha3]) => [alpha3, normalizeCountryCode(alpha2)])
@@ -425,10 +482,12 @@
       ...data,
       features: (data.features || []).map(feature => {
         const properties = feature.properties || {};
-        const id = properties.ADM0_A3 || feature.id;
+        const id = properties.GU_A3 || properties.ADM0_A3 || feature.id;
         const sourceCode = properties.ISO_A2_EH || properties.ISO_A2;
         const countryCode = normalizeCountryCode(
-          sourceCode && sourceCode !== "-99" ? sourceCode : alpha3ToAlpha2.get(id)
+          sourceCode && sourceCode !== "-99"
+            ? sourceCode
+            : (MAP_FEATURE_COUNTRY_CODES[id] || alpha3ToAlpha2.get(id))
         );
         return { ...feature, id, properties: { ...properties, countryCode } };
       })
@@ -451,8 +510,8 @@
     return [min, max];
   }
 
-  function prepareWorldCountryHitAreas() {
-    worldCountryHitAreas = (worldCountriesData?.features || []).map(feature => {
+  function prepareWorldCountryHitAreas(data) {
+    worldCountryHitAreas = (data?.features || []).map(feature => {
       const [minLat, maxLat] = geometryLatitudeBounds(feature.geometry);
       return { feature, minLat, maxLat };
     });
@@ -460,15 +519,16 @@
 
   async function loadMapBoundaryData() {
     try {
-      const [rawWorldCountries, provinces, codeMap] = await Promise.all([
+      const [rawWorldCountries, rawWorldHitCountries, provinces, codeMap] = await Promise.all([
         loadWorldCountries(),
+        loadWorldHitCountries(),
         fetchJson("./data/china-provinces.geo.json"),
         fetchJson("./data/country-code-map.json")
       ]);
       chinaProvincesData = provinces;
       countryCodeMap = codeMap;
       worldCountriesData = normalizeWorldCountries(rawWorldCountries);
-      prepareWorldCountryHitAreas();
+      prepareWorldCountryHitAreas(normalizeWorldCountries(rawWorldHitCountries || rawWorldCountries));
       hydrateCountryCoordinatesFromBoundaries();
       render();
     } catch { /* the base map remains usable without boundary overlays */ }
@@ -1009,6 +1069,12 @@
     else buckets.set(key, [city]);
   }
 
+  function addCityToCountry(countries, city) {
+    const bucket = countries.get(city.countryCode);
+    if (bucket) bucket.push(city);
+    else countries.set(city.countryCode, [city]);
+  }
+
   function createLocalCity(row) {
     const originalCountryCode = String(row[2] || "").toUpperCase();
     const countryCode = normalizeCountryCode(originalCountryCode);
@@ -1043,6 +1109,7 @@
     }));
     const cities = [];
     const buckets = new Map();
+    const countries = new Map();
     for (const chunkResponse of chunkResponses) {
       const stream = chunkResponse.body.pipeThrough(new DecompressionStream("gzip"));
       const rows = await new Response(stream).json();
@@ -1052,12 +1119,14 @@
           if (!city.name || !Number.isFinite(city.lat) || !Number.isFinite(city.lng)) return;
           cities.push(city);
           addCityToBucket(buckets, city);
+          addCityToCountry(countries, city);
         });
         await yieldToBrowser();
       }
     }
     localCities = cities;
     localCityBuckets = buckets;
+    localCitiesByCountry = countries;
     return localCities;
   }
 
@@ -1195,25 +1264,27 @@
     return ((index + 180) % 360 + 360) % 360 - 180;
   }
 
-  function longitudeNear(value, reference) {
-    let adjusted = Number(value);
-    while (adjusted - reference > 180) adjusted -= 360;
-    while (adjusted - reference < -180) adjusted += 360;
-    return adjusted;
-  }
-
   function pointInRing(lat, lng, ring) {
+    let minLng = 180;
+    let maxLng = -180;
+    ring.forEach(point => {
+      minLng = Math.min(minLng, point[0]);
+      maxLng = Math.max(maxLng, point[0]);
+    });
+    const crossesDateline = maxLng - minLng > 180;
+    const testLng = crossesDateline && lng < 0 ? lng + 360 : lng;
+    const ringLng = value => crossesDateline && value < 0 ? value + 360 : value;
     let inside = false;
     for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
       const currentPoint = ring[index];
       const previousPoint = ring[previous];
-      const currentLng = longitudeNear(currentPoint[0], lng);
-      const previousLng = longitudeNear(previousPoint[0], lng);
+      const currentLng = ringLng(currentPoint[0]);
+      const previousLng = ringLng(previousPoint[0]);
       const currentLat = currentPoint[1];
       const previousLat = previousPoint[1];
       const crossesLatitude = (currentLat > lat) !== (previousLat > lat);
       if (crossesLatitude
-        && lng < (previousLng - currentLng) * (lat - currentLat) / (previousLat - currentLat) + currentLng) {
+        && testLng < (previousLng - currentLng) * (lat - currentLat) / (previousLat - currentLat) + currentLng) {
         inside = !inside;
       }
     }
@@ -1229,17 +1300,34 @@
     });
   }
 
-  function findCountryCodeAtPoint(lat, lng) {
+  function findMapLocationAtPoint(lat, lng) {
     if (currentView === "china") {
-      return chinaProvincesData?.features?.some(feature => pointInGeometry(lat, lng, feature.geometry)) ? "CN" : "";
+      const isLand = Boolean(chinaProvincesData?.features?.some(feature => pointInGeometry(lat, lng, feature.geometry)));
+      return { isLand, countryCode: isLand ? "CN" : "" };
     }
     const match = worldCountryHitAreas.find(area => (
       lat >= area.minLat && lat <= area.maxLat && pointInGeometry(lat, lng, area.feature.geometry)
     ));
-    return match?.feature?.properties?.countryCode || "";
+    if (match) return { isLand: true, countryCode: match.feature.properties?.countryCode || "" };
+    const fallback = FALLBACK_LAND_AREAS.find(area => (
+      lat >= area.minLat && lat <= area.maxLat && lng >= area.minLng && lng <= area.maxLng
+    ));
+    return { isLand: Boolean(fallback), countryCode: fallback?.countryCode || "" };
   }
 
   function findNearestLocalCity(lat, lng, maxDistance, chinaOnly, countryCode = "") {
+    if (countryCode) {
+      let candidate = null;
+      let nearestDistance = Infinity;
+      (localCitiesByCountry.get(countryCode) || []).forEach(city => {
+        const distance = distanceKm(lat, lng, city.lat, city.lng);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          candidate = city;
+        }
+      });
+      return { candidate, nearestDistance };
+    }
     const latitudeRadius = maxDistance / 111.32;
     const furthestLatitude = Math.min(89.9, Math.abs(lat) + latitudeRadius);
     const longitudeRadius = Math.min(180, maxDistance / (111.32 * Math.max(.01, Math.cos(furthestLatitude * Math.PI / 180))));
@@ -1279,8 +1367,8 @@
     try {
       if (worldBoundaryLoadPromise) await worldBoundaryLoadPromise;
       if (lookupId !== pendingLookupId) return;
-      const clickedCountryCode = findCountryCodeAtPoint(event.latlng.lat, event.latlng.lng);
-      if (!clickedCountryCode) {
+      const clickedLocation = findMapLocationAtPoint(event.latlng.lat, event.latlng.lng);
+      if (!clickedLocation.isLand) {
         els.searchStatus.textContent = "海洋区域未选择任何地点，请点击陆地城市。";
         return;
       }
@@ -1301,9 +1389,9 @@
         event.latlng.lng,
         maxDistance,
         currentView === "china",
-        clickedCountryCode
+        clickedLocation.countryCode
       );
-      if (!candidate || nearestDistance > maxDistance) {
+      if (!candidate) {
         els.searchStatus.textContent = "附近没有匹配到城市，请在右侧输入城市名称搜索。";
         return;
       }
