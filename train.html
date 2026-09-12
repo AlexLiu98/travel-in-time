@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#06131e" />
+    <meta name="description" content="Travel in Time：像素风 DB 随机车站转车肉鸽游戏。看懂中德双语提示，在突发事件中赶上下一班车。" />
+    <title>DB 转车大作战 · Travel in Time</title>
+    <link rel="stylesheet" href="./train-game.css?v=8" />
+  </head>
+  <body>
+    <div class="train-shell">
+      <header class="train-header">
+        <a class="back-link" id="backLink" href="./index.html" aria-label="返回旅行地图">←</a>
+        <a class="train-brand" id="brandLink" href="./index.html">
+          <span class="brand-gem" aria-hidden="true">✦</span>
+          <span><strong>Travel in Time</strong><small>PLATFORM PANIC</small></span>
+        </a>
+        <div class="header-title"><span>像素肉鸽</span><strong>DB 转车大作战</strong></div>
+        <a class="other-game" id="flagGameLink" href="./flags.html?v=12">◆ 国旗连连看</a>
+        <label class="volume-control" title="音乐音量">
+          <span aria-hidden="true">♫</span>
+          <input id="volumeSlider" type="range" min="0" max="100" value="72" aria-label="音乐音量" />
+        </label>
+        <button class="sound-toggle" id="soundToggle" type="button" aria-pressed="true" aria-label="关闭音乐" title="关闭音乐">♫</button>
+      </header>
+
+      <main>
+        <section class="hero-strip">
+          <div>
+            <p class="eyebrow">ACHTUNG, GLEISÄNDERUNG!</p>
+            <h1>下一班车，千万别错过。</h1>
+            <p>看懂中德双语广播，在随机车站和突发事件中找到正确站台。</p>
+          </div>
+          <div class="run-records" aria-label="游戏记录">
+            <article><span>最佳分数</span><strong id="bestScore">0</strong></article>
+            <article><span>成功通关</span><strong id="winCount">0</strong></article>
+            <article><span>本轮路线</span><strong id="routeProgress">0 / 4</strong></article>
+          </div>
+        </section>
+
+        <section class="mission-bar" aria-label="当前任务">
+          <div class="departure-board">
+            <span class="board-led" aria-hidden="true"></span>
+            <div><small>NÄCHSTE VERBINDUNG · 下一程</small><strong id="trainName">ICE 0</strong></div>
+            <div><small>RICHTUNG · 方向</small><strong id="destination">等待发车</strong></div>
+            <div><small>WAGEN · 车厢区</small><strong id="platform">—</strong></div>
+            <div><small>ABFAHRT · 发车倒计时</small><strong class="countdown" id="countdown">00:00</strong></div>
+          </div>
+          <button class="start-button" id="startButton" type="button">开始旅程</button>
+        </section>
+
+        <section class="game-layout">
+          <div class="screen-column">
+            <div class="pixel-frame" id="pixelFrame">
+              <canvas id="gameCanvas" width="960" height="540" aria-label="DB 车站转车游戏画面"></canvas>
+              <div class="crt-lines" aria-hidden="true"></div>
+              <div class="event-banner" id="eventBanner" aria-live="assertive">
+                <small id="eventGerman">BETRIEBSMELDUNG</small>
+                <strong id="eventChinese">运行通知</strong>
+              </div>
+              <div class="screen-overlay show" id="screenOverlay">
+                <span class="overlay-icon" id="overlayIcon" aria-hidden="true">🚆</span>
+                <p class="eyebrow" id="overlayEyebrow">DEINE REISE BEGINNT</p>
+                <h2 id="overlayTitle">准备好转车了吗？</h2>
+                <p id="overlayText">先在大厅确认车次，再下楼穿过地下通道，从正确楼梯上站台。WASD 移动，E 互动，Shift 冲刺。</p>
+                <button id="overlayButton" type="button">进入车站</button>
+              </div>
+              <div class="upgrade-overlay" id="upgradeOverlay" hidden>
+                <p class="eyebrow">REISEPROVIANT · 选择一项升级</p>
+                <h2>下一站之前，带上什么？</h2>
+                <div class="upgrade-grid" id="upgradeGrid"></div>
+              </div>
+            </div>
+
+            <div class="touch-controls" aria-label="触屏方向控制">
+              <button data-key="up" type="button" aria-label="向上">▲</button>
+              <button data-key="left" type="button" aria-label="向左">◀</button>
+              <button data-key="down" type="button" aria-label="向下">▼</button>
+              <button data-key="right" type="button" aria-label="向右">▶</button>
+              <button class="dash-key" data-key="dash" type="button" aria-label="冲刺">冲刺</button>
+              <button class="interact-key" data-key="interact" type="button" aria-label="互动">互动</button>
+            </div>
+          </div>
+
+          <aside class="game-side">
+            <section class="status-card">
+              <div class="status-row"><span>所在车站</span><strong id="stationName">—</strong></div>
+              <div class="status-row"><span>当前位置 / Ebene</span><strong id="floorName">大厅</strong></div>
+              <div class="status-row objective-row"><span>当前任务 / Aufgabe</span><strong id="objectiveText">查看出发大屏</strong></div>
+              <div class="status-row"><span>车票 / Tickets</span><strong id="lives">♥ ♥ ♥</strong></div>
+              <div class="status-row"><span>得分 / Punkte</span><strong id="score">0</strong></div>
+              <div class="stamina-wrap"><span>冲刺体力 / Ausdauer</span><i><b id="staminaBar"></b></i></div>
+            </section>
+
+            <section class="event-log-card">
+              <div class="card-heading"><span>车站广播</span><small>DURCHSAGEN</small></div>
+              <ol class="event-log" id="eventLog" aria-live="polite">
+                <li><time>--:--</time><p><b>Willkommen!</b><span>欢迎来到车站。</span></p></li>
+              </ol>
+            </section>
+
+            <section class="controls-card">
+              <div><kbd>WASD</kbd><span>移动<br /><small>Bewegen</small></span></div>
+              <div><kbd>SHIFT</kbd><span>冲刺<br /><small>Sprinten</small></span></div>
+              <div><kbd>E</kbd><span>互动<br /><small>Benutzen</small></span></div>
+              <div><kbd>P</kbd><span>暂停<br /><small>Pause</small></span></div>
+            </section>
+
+            <section class="tips-card">
+              <strong>站务员提示</strong>
+              <p id="stationTip">记住大屏站台号，再到地下通道逐个查看楼梯标牌；没有高亮路线提示。</p>
+            </section>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <div class="game-toast" id="gameToast" role="status" aria-live="polite"></div>
+    <script src="./train-game.js?v=7"></script>
+  </body>
+</html>

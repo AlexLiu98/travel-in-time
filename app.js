@@ -102,7 +102,7 @@
     "mapLabel", "mapHint", "mapFallback", "countryGroup", "countrySelect", "addCountryBtn", "cityInput",
     "searchCityBtn", "cityCountryGroup", "cityCountrySelect", "searchStatus", "searchResults",
     "addTitle", "viewBadge", "visitedTitle", "filterInput", "visitedList", "fitBtn", "exportBtn", "importBtn",
-    "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote", "accountButton", "flagsEntry", "ratingsEntry"
+    "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote", "accountButton", "flagsEntry", "trainEntry", "ratingsEntry"
   ].map(id => [id, document.getElementById(id)]));
 
   const accountMode = new URLSearchParams(window.location.search).get("mode") === "account";
@@ -294,6 +294,7 @@
 
   function configureAccountUI() {
     if (els.flagsEntry) els.flagsEntry.href = accountMode ? "./flags.html?v=12&mode=account" : "./flags.html?v=12";
+    if (els.trainEntry) els.trainEntry.href = accountMode ? "./train.html?v=2&mode=account" : "./train.html?v=2";
     if (els.ratingsEntry) els.ratingsEntry.href = accountMode ? "./ratings.html?v=6&mode=account" : "./ratings.html?v=6";
     if (!els.accountButton) return;
     if (accountMode) {
