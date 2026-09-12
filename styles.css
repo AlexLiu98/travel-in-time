@@ -23,10 +23,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 14% -10%, rgba(73, 214, 209, 0.17), transparent 32rem),
-    radial-gradient(circle at 91% 4%, rgba(255, 120, 104, 0.12), transparent 28rem),
-    linear-gradient(145deg, rgba(4, 13, 24, .9), rgba(5, 16, 28, .95)),
-    url("./travel-in-time-hero.webp") center / cover fixed no-repeat;
+    radial-gradient(circle at 14% -10%, rgba(73, 214, 209, 0.12), transparent 32rem),
+    radial-gradient(circle at 91% 4%, rgba(255, 209, 102, 0.08), transparent 28rem),
+    linear-gradient(145deg, rgba(4, 13, 24, .62), rgba(5, 16, 28, .78)),
+    url("./background-home-v2.webp") center / cover fixed no-repeat;
   color: var(--text);
   font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   font-size: 16px;

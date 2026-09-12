@@ -16,10 +16,10 @@ html { min-height: 100%; background: var(--ink); }
 body {
   min-width: 320px; min-height: 100vh; margin: 0; color: var(--text);
   background:
-    radial-gradient(circle at 12% -8%, rgba(80,215,209,.16), transparent 32rem),
-    radial-gradient(circle at 92% 6%, rgba(179,119,27,.14), transparent 30rem),
-    linear-gradient(145deg, rgba(4,14,25,.9), rgba(5,15,26,.95)),
-    url("./ranking-hero-coast.jpg") center / cover fixed no-repeat;
+    radial-gradient(circle at 12% -8%, rgba(80,215,209,.1), transparent 32rem),
+    radial-gradient(circle at 92% 6%, rgba(255,186,82,.1), transparent 30rem),
+    linear-gradient(145deg, rgba(4,14,25,.57), rgba(5,15,26,.74)),
+    url("./background-rankings-v2.webp") center / cover fixed no-repeat;
   font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 button, input, a { font: inherit; }

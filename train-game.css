@@ -17,10 +17,10 @@ html { min-height: 100%; background: var(--ink); }
 body {
   min-height: 100vh; margin: 0; color: var(--text);
   background:
-    radial-gradient(circle at 12% 0, rgba(33, 157, 169, .17), transparent 30rem),
-    radial-gradient(circle at 88% 14%, rgba(236, 38, 56, .09), transparent 25rem),
-    linear-gradient(145deg, rgba(3,13,22,.78), rgba(5,20,31,.64) 54%, rgba(3,11,19,.82)),
-    url("./assets/db-rhine-pixel-bg.webp") center / cover fixed no-repeat;
+    radial-gradient(circle at 12% 0, rgba(33, 157, 169, .1), transparent 30rem),
+    radial-gradient(circle at 88% 14%, rgba(255, 212, 74, .08), transparent 25rem),
+    linear-gradient(145deg, rgba(3,13,22,.5), rgba(5,20,31,.45) 54%, rgba(3,11,19,.66)),
+    url("./background-db-v2.webp") center / cover fixed no-repeat;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
 }
 button, input, a { font: inherit; }

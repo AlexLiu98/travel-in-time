@@ -12,9 +12,9 @@ html { min-width: 320px; background: var(--ink); }
 body {
   min-width: 320px; min-height: 100vh; margin: 0; color: var(--text);
   background:
-    radial-gradient(circle at 10% 0%, rgba(73,214,209,.15), transparent 30rem),
-    linear-gradient(145deg, rgba(3,12,22,.78), rgba(5,15,26,.94)),
-    url("./games-hero-adventure.webp") center / cover fixed no-repeat;
+    radial-gradient(circle at 10% 0%, rgba(73,214,209,.1), transparent 30rem),
+    linear-gradient(145deg, rgba(3,12,22,.48), rgba(5,15,26,.68)),
+    url("./background-games-v2.webp") center / cover fixed no-repeat;
   font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 a { color: inherit; }
