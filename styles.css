@@ -25,7 +25,8 @@ body {
   background:
     radial-gradient(circle at 14% -10%, rgba(73, 214, 209, 0.17), transparent 32rem),
     radial-gradient(circle at 91% 4%, rgba(255, 120, 104, 0.12), transparent 28rem),
-    var(--ink);
+    linear-gradient(145deg, rgba(4, 13, 24, .9), rgba(5, 16, 28, .95)),
+    url("./travel-in-time-hero.webp") center / cover fixed no-repeat;
   color: var(--text);
   font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   font-size: 16px;
@@ -63,9 +64,9 @@ button { cursor: pointer; }
 .rating-entry { border-color: rgba(73,214,209,.3); color: #bdecea; background: rgba(24,101,104,.09); }
 .rating-entry span { color: var(--cyan); font-size: .82rem; transform: none; }
 .rating-entry:hover { color: #e8ffff; border-color: rgba(73,214,209,.58); background: rgba(35,129,132,.15); }
-.train-entry { border-color: rgba(234,69,78,.34); color: #ffc4c8; background: rgba(154,31,43,.1); }
-.train-entry span { color: #ec4552; font-size: .78rem; transform: none; }
-.train-entry:hover { color: #fff0f1; border-color: rgba(236,69,82,.62); background: rgba(177,37,50,.16); }
+.games-entry { border-color: rgba(255,209,102,.4); color: #ffebb6; background: rgba(149,96,15,.12); }
+.games-entry span { color: var(--yellow); font-size: .82rem; transform: none; }
+.games-entry:hover { color: #fff8df; border-color: rgba(255,209,102,.72); background: rgba(170,111,18,.2); }
 .save-note { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .82rem; margin-right: 8px; }
 .save-note i { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 .save-note.sync-error i { background: var(--coral); box-shadow: 0 0 10px var(--coral); }

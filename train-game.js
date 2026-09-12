@@ -3,10 +3,10 @@
   const $ = (id) => document.getElementById(id);
   const canvas = $("gameCanvas"), ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
-  const ui = Object.fromEntries(["backLink","brandLink","flagGameLink","volumeSlider","soundToggle","bestScore","winCount","routeProgress","trainName","destination","platform","countdown","startButton","eventBanner","eventGerman","eventChinese","screenOverlay","overlayIcon","overlayEyebrow","overlayTitle","overlayText","overlayButton","upgradeOverlay","upgradeGrid","stationName","floorName","objectiveText","lives","score","staminaBar","eventLog","stationTip","gameToast"].map(id => [id, $(id)]));
+  const ui = Object.fromEntries(["backLink","brandLink","gameHubLink","volumeSlider","soundToggle","bestScore","winCount","routeProgress","trainName","destination","platform","countdown","startButton","eventBanner","eventGerman","eventChinese","screenOverlay","overlayIcon","overlayEyebrow","overlayTitle","overlayText","overlayButton","upgradeOverlay","upgradeGrid","stationName","floorName","objectiveText","lives","score","staminaBar","eventLog","stationTip","gameToast"].map(id => [id, $(id)]));
   const account = new URLSearchParams(location.search).get("mode") === "account";
   ui.backLink.href = ui.brandLink.href = account ? "./index.html?mode=account" : "./index.html";
-  ui.flagGameLink.href = account ? "./flags.html?v=12&mode=account" : "./flags.html?v=12";
+  ui.gameHubLink.href = account ? "./games.html?v=1&mode=account" : "./games.html?v=1";
 
   const STATIONS = [["Köln Hbf","科隆中央火车站"],["Frankfurt (Main) Hbf","法兰克福中央火车站"],["Hamburg Hbf","汉堡中央火车站"],["München Hbf","慕尼黑中央火车站"],["Berlin Hbf","柏林中央火车站"],["Bonn Hbf","波恩中央火车站"],["Hannover Hbf","汉诺威中央火车站"],["Mainz Hbf","美因茨中央火车站"],["Düsseldorf Hbf","杜塞尔多夫中央火车站"],["Leipzig Hbf","莱比锡中央火车站"]];
   const DESTS = ["Berlin","Bonn","Bremen","Dresden","Düsseldorf","Frankfurt","Hamburg","Köln","Leipzig","Mainz","München","Nürnberg","Stuttgart","Wiesbaden"];

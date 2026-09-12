@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="description" content="Travel in Time 旅行游戏厅：国旗连连看与 DB 转车大作战。" />
+    <title>旅行游戏厅 · Travel in Time</title>
+    <link rel="preload" as="image" href="./games-hero-adventure.webp" />
+    <link rel="stylesheet" href="./games.css?v=1" />
+  </head>
+  <body>
+    <div class="lounge-shell">
+      <header class="lounge-header">
+        <a class="back-link" id="backLink" href="./index.html" aria-label="返回旅行地图">←</a>
+        <a class="lounge-brand" id="brandLink" href="./index.html">
+          <span class="brand-gem" aria-hidden="true">✦</span>
+          <span><strong>Travel in Time</strong><small>TRAVEL GAME LOUNGE</small></span>
+        </a>
+        <span class="header-label">两款旅途小游戏</span>
+      </header>
+
+      <main>
+        <section class="lounge-hero">
+          <div>
+            <p class="eyebrow">PLAY YOUR WAY AROUND THE WORLD</p>
+            <h1>旅行游戏厅</h1>
+            <p>在地图之外，换一种方式继续旅行。</p>
+          </div>
+          <span class="hero-count"><b>2</b> GAMES</span>
+        </section>
+
+        <section class="game-library" aria-labelledby="libraryTitle">
+          <div class="library-heading">
+            <div>
+              <p class="eyebrow">CHOOSE YOUR ADVENTURE</p>
+              <h2 id="libraryTitle">选择一段旅程</h2>
+            </div>
+            <p>每张卡片都是一个独立世界，点击即可进入。</p>
+          </div>
+
+          <div class="game-grid">
+            <a class="game-card flags-card" id="flagsGame" href="./flags.html?v=13">
+              <span class="card-number">01</span>
+              <div class="card-copy">
+                <div class="card-tags"><span>观察力</span><span>轻松配对</span></div>
+                <h3>国旗连连看</h3>
+                <p>翻开世界各地的国旗，在有限时间内寻找可以连线的相同图案。</p>
+                <strong>开始配对 <i>→</i></strong>
+              </div>
+            </a>
+
+            <a class="game-card db-card" id="trainGame" href="./train.html?v=3">
+              <span class="card-number">02</span>
+              <div class="card-copy">
+                <div class="card-tags"><span>反应力</span><span>随机挑战</span></div>
+                <h3>DB 转车大作战</h3>
+                <p>听广播、查站台、穿过地下通道，在突发事件中赶上下一班车。</p>
+                <strong>进入车站 <i>→</i></strong>
+              </div>
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="./games.js?v=1"></script>
+  </body>
+</html>
