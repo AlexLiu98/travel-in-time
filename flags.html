@@ -67,11 +67,11 @@
             <div class="side-actions">
               <button id="hintBtn" type="button" disabled><span>◎</span><strong>提示</strong><small id="hintCount">3 次</small></button>
               <button id="pauseBtn" type="button" disabled><span>Ⅱ</span><strong>暂停</strong><small>计时停止</small></button>
-              <button id="shuffleBtn" type="button" disabled><span>↻</span><strong>洗牌</strong><small>重新排列</small></button>
+              <button id="shuffleBtn" type="button" disabled><span>↻</span><strong>洗牌</strong><small>每局 1 次</small></button>
             </div>
             <div class="rule-card">
               <span class="rule-number">02</span>
-              <div><strong>最多两个转弯</strong><p>棋盘外侧也可以连接。没有可消除组合时，系统会自动洗牌。</p></div>
+              <div><strong>最多两个转弯</strong><p>棋盘外侧也可以连接。手动洗牌每局仅限 1 次；无解时系统会自动洗牌。</p></div>
             </div>
             <div class="last-match" id="lastMatch" aria-live="polite">
               <span>最近识别</span><strong>等待开始</strong>
@@ -94,6 +94,6 @@
       </div>
     </dialog>
 
-    <script src="./flags-game.js?v=11"></script>
+    <script src="./flags-game.js?v=12"></script>
   </body>
 </html>

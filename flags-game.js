@@ -56,6 +56,7 @@
   let bgmTimer = 0;
   let bgmStep = 0;
   let soundEnabled = localStorage.getItem(AUDIO_KEY) !== "off";
+  let shuffleUsed = false;
 
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
   const BGM_MELODY = [
@@ -197,6 +198,12 @@
     els.toast.textContent = message;
     els.toast.classList.add("show");
     toastId = setTimeout(() => els.toast.classList.remove("show"), 1800);
+  };
+
+  const updateShuffleButton = () => {
+    els.shuffle.disabled = !playing || paused || shuffleUsed;
+    const label = els.shuffle.querySelector("small");
+    if (label) label.textContent = shuffleUsed ? "本局已使用" : "每局 1 次";
   };
 
   const tileAt = ({ row, col }) => board[row]?.[col] || null;
@@ -391,7 +398,15 @@
   };
 
   const reshuffle = (automatic = false) => {
-    if (!playing || locked) return;
+    if (!playing || paused || locked) return;
+    if (!automatic) {
+      if (shuffleUsed) {
+        showToast("本局的手动洗牌已经使用过了");
+        return;
+      }
+      shuffleUsed = true;
+      updateShuffleButton();
+    }
     const values = board.flat().filter(Boolean);
     const cells = [];
     board.forEach((row, rowIndex) => row.forEach((tile, colIndex) => {
@@ -504,6 +519,7 @@
       els.board.style.filter = "";
       startBgm();
     }
+    updateShuffleButton();
   };
 
   const finishGame = (won, preserveRemaining = false) => {
@@ -545,6 +561,7 @@
     selected = null;
     remainingPairs = cfg.pairs;
     hints = 3;
+    shuffleUsed = false;
     playing = true;
     paused = false;
     locked = false;
@@ -557,7 +574,7 @@
     els.hintCount.textContent = `${hints} 次`;
     els.hint.disabled = false;
     els.pause.disabled = false;
-    els.shuffle.disabled = false;
+    updateShuffleButton();
     els.start.textContent = "重新开始";
     els.last.innerHTML = "<span>最近识别</span><strong>等待消除</strong>";
     els.board.style.filter = "";
@@ -575,6 +592,7 @@
     stopBgm();
     playing = false;
     paused = false;
+    shuffleUsed = false;
     levelKey = button.dataset.level;
     document.querySelectorAll(".difficulty").forEach(item => item.classList.toggle("active", item === button));
     const cfg = LEVELS[levelKey];
@@ -584,7 +602,7 @@
     els.start.textContent = "开始游戏";
     els.hint.disabled = true;
     els.pause.disabled = true;
-    els.shuffle.disabled = true;
+    updateShuffleButton();
   }));
 
   els.start.addEventListener("click", () => {
