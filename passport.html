@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#14243a" />
+    <meta name="description" content="Travel in Time 旅行护照：把记录过的国家与城市装订成一本可以翻阅的电子护照。" />
+    <title>旅行护照 · Travel in Time</title>
+    <link rel="preload" as="image" href="./passport-airport-v1.webp" />
+    <link rel="stylesheet" href="./passport.css?v=1" />
+  </head>
+  <body>
+    <div class="passport-shell">
+      <header class="passport-header">
+        <a class="back-link" id="backLink" href="./index.html" aria-label="返回旅行地图">←</a>
+        <a class="passport-brand" id="brandLink" href="./index.html">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <span><strong>Travel in Time</strong><small>TRAVEL PASSPORT</small></span>
+        </a>
+        <div class="header-title"><span>旅行收藏</span><strong>我的旅行护照</strong></div>
+        <span class="data-state" id="dataState"><i></i>正在整理足迹</span>
+      </header>
+
+      <main class="passport-main">
+        <section class="passport-stage" aria-label="可翻页的旅行护照">
+          <div class="passport-book" id="passportBook">
+            <button class="passport-cover" id="openPassport" type="button" aria-expanded="false">
+              <span class="cover-kicker">TRAVEL DOCUMENT</span>
+              <span class="cover-emblem" aria-hidden="true"><i>✦</i></span>
+              <span class="cover-title">旅行护照</span>
+              <span class="cover-subtitle">TRAVEL IN TIME</span>
+              <span class="cover-rule"></span>
+              <span class="cover-open">点击打开 <b>OPEN</b></span>
+            </button>
+
+            <div class="book-spread" id="bookSpread" aria-live="polite">
+              <article class="passport-page left-page" id="leftPage"></article>
+              <span class="book-spine" aria-hidden="true"></span>
+              <article class="passport-page right-page" id="rightPage"></article>
+              <div class="turn-sheet" id="turnSheet" aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <nav class="passport-controls" id="passportControls" aria-label="护照翻页控制">
+            <button id="prevPage" type="button"><span aria-hidden="true">←</span><b>上一页</b></button>
+            <div class="page-status">
+              <strong id="chapterLabel">旅程总览</strong>
+              <span id="pageIndicator">01–02 / 02</span>
+            </div>
+            <button class="stamp-again" id="replayStamps" type="button"><span aria-hidden="true">◎</span><b>重新盖章</b></button>
+            <button id="nextPage" type="button"><b>下一页</b><span aria-hidden="true">→</span></button>
+            <button class="close-book" id="closePassport" type="button"><span aria-hidden="true">×</span><b>合上护照</b></button>
+          </nav>
+        </section>
+      </main>
+    </div>
+
+    <div class="passport-toast" id="passportToast" role="status" aria-live="polite"></div>
+    <script src="./passport.js?v=1"></script>
+  </body>
+</html>

@@ -67,6 +67,9 @@ button { cursor: pointer; }
 .games-entry { border-color: rgba(255,209,102,.4); color: #ffebb6; background: rgba(149,96,15,.12); }
 .games-entry span { color: var(--yellow); font-size: .82rem; transform: none; }
 .games-entry:hover { color: #fff8df; border-color: rgba(255,209,102,.72); background: rgba(170,111,18,.2); }
+.passport-entry { border-color: rgba(204,126,151,.46); color: #f1c8d5; background: rgba(105,27,53,.16); }
+.passport-entry span { color: #e6a9bd; font-size: .88rem; transform: none; }
+.passport-entry:hover { color: #ffe9f0; border-color: rgba(230,169,189,.72); background: rgba(132,37,68,.24); }
 .save-note { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: .82rem; margin-right: 8px; }
 .save-note i { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 10px var(--cyan); }
 .save-note.sync-error i { background: var(--coral); box-shadow: 0 0 10px var(--coral); }
@@ -357,7 +360,8 @@ dialog p { color: var(--muted); font-size: .84rem; line-height: 1.6; margin: 0 0
 }
 
 @media (max-width: 560px) {
-  .topbar { height: 68px; }
+  .topbar { height: auto; min-height: 68px; padding: 9px 0; gap: 8px; }
+  .top-actions { flex: 1; min-width: 0; flex-wrap: wrap; justify-content: flex-end; }
   .save-note { display: none; }
   .brand { gap: 8px; }
   .brand-mark { width: 36px; height: 36px; border-radius: 10px; font-size: 20px; }

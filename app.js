@@ -102,7 +102,7 @@
     "mapLabel", "mapHint", "mapFallback", "countryGroup", "countrySelect", "addCountryBtn", "cityInput",
     "searchCityBtn", "cityCountryGroup", "cityCountrySelect", "searchStatus", "searchResults",
     "addTitle", "viewBadge", "visitedTitle", "filterInput", "visitedList", "fitBtn", "exportBtn", "importBtn",
-    "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote", "accountButton", "gamesEntry", "ratingsEntry"
+    "importFile", "clearBtn", "confirmDialog", "confirmClearBtn", "toast", "saveNote", "accountButton", "passportEntry", "gamesEntry", "ratingsEntry"
   ].map(id => [id, document.getElementById(id)]));
 
   const accountMode = new URLSearchParams(window.location.search).get("mode") === "account";
@@ -293,6 +293,7 @@
   }
 
   function configureAccountUI() {
+    if (els.passportEntry) els.passportEntry.href = accountMode ? "./passport.html?v=1&mode=account" : "./passport.html?v=1";
     if (els.gamesEntry) els.gamesEntry.href = accountMode ? "./games.html?v=2&mode=account" : "./games.html?v=2";
     if (els.ratingsEntry) els.ratingsEntry.href = accountMode ? "./ratings.html?v=6&mode=account" : "./ratings.html?v=6";
     if (!els.accountButton) return;
