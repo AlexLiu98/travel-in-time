@@ -115,7 +115,7 @@
       audioContext = new AudioContextClass();
       const master = audioContext.createGain();
       const limiter = audioContext.createDynamicsCompressor();
-      master.gain.value = .78;
+      master.gain.value = .82;
       limiter.threshold.value = -8;
       limiter.knee.value = 12;
       limiter.ratio.value = 5;
@@ -132,8 +132,8 @@
       let last = 0;
       for (let index = 0; index < channel.length; index += 1) {
         const white = Math.random() * 2 - 1;
-        last = last * .62 + white * .38;
-        channel[index] = last;
+        last = (last + white * .025) / 1.025;
+        channel[index] = last * 3.8;
       }
     }
     return audioContext;
@@ -147,19 +147,23 @@
     const filter = context.createBiquadFilter();
     const gain = context.createGain();
     source.buffer = pageNoise;
-    source.playbackRate.value = cover ? .88 : 1.05 + Math.random() * .12;
-    filter.type = "bandpass";
-    filter.frequency.value = cover ? 1250 : 1650;
-    filter.Q.value = .38;
+    const tail = cover ? .6 : .54;
+    source.playbackRate.value = cover ? .72 : .84 + Math.random() * .08;
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(cover ? 480 : 620, now);
+    filter.frequency.exponentialRampToValueAtTime(cover ? 980 : 1250, now + .16);
+    filter.frequency.exponentialRampToValueAtTime(cover ? 420 : 520, now + tail);
+    filter.Q.value = .18;
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(cover ? .27 : .34, now + .028);
-    gain.gain.exponentialRampToValueAtTime(.11, now + .17);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + (cover ? .5 : .42));
+    gain.gain.exponentialRampToValueAtTime(.045, now + .035);
+    gain.gain.exponentialRampToValueAtTime(cover ? .24 : .3, now + .15);
+    gain.gain.exponentialRampToValueAtTime(.11, now + .34);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + tail);
     source.connect(filter);
     if (typeof context.createStereoPanner === "function") {
       const pan = context.createStereoPanner();
       pan.pan.setValueAtTime(direction > 0 ? .65 : -.65, now);
-      pan.pan.linearRampToValueAtTime(direction > 0 ? -.5 : .5, now + .45);
+      pan.pan.linearRampToValueAtTime(direction > 0 ? -.42 : .42, now + tail);
       filter.connect(gain);
       gain.connect(pan);
       pan.connect(context.pageTurnOutput);
@@ -168,7 +172,7 @@
       gain.connect(context.pageTurnOutput);
     }
     source.start(now);
-    source.stop(now + .52);
+    source.stop(now + tail + .02);
   };
 
   const playStampSound = (delay = 0) => {
@@ -238,7 +242,7 @@
   const makeDocumentPage = countryCount => ({
     chapter: "旅行证件",
     html: `<div class="document-page">
-      ${pageHeading("TRAVEL DOCUMENT", "旅行护照", "TRAVEL IN TIME")}
+      ${pageHeading("PASSPORT", "旅行护照", "TRAVEL IN TIME")}
       <div class="document-motif" aria-hidden="true">
         <svg viewBox="0 0 360 170">
           <path class="motif-route" d="M28 123C89 34 202 38 323 104" />
@@ -356,7 +360,7 @@
   };
 
   const load = async () => {
-    const backHref = accountMode ? "./index.html?mode=account" : "./index.html";
+    const backHref = accountMode ? "./travel.html?mode=account" : "./index.html";
     els.back.href = backHref;
     els.brand.href = backHref;
     if (accountMode) {
