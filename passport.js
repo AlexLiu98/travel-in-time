@@ -115,7 +115,7 @@
       audioContext = new AudioContextClass();
       const master = audioContext.createGain();
       const limiter = audioContext.createDynamicsCompressor();
-      master.gain.value = .9;
+      master.gain.value = .78;
       limiter.threshold.value = -8;
       limiter.knee.value = 12;
       limiter.ratio.value = 5;
@@ -147,14 +147,14 @@
     const filter = context.createBiquadFilter();
     const gain = context.createGain();
     source.buffer = pageNoise;
-    source.playbackRate.value = cover ? .76 : .94 + Math.random() * .12;
+    source.playbackRate.value = cover ? .88 : 1.05 + Math.random() * .12;
     filter.type = "bandpass";
-    filter.frequency.value = cover ? 720 : 1180;
-    filter.Q.value = .55;
+    filter.frequency.value = cover ? 1250 : 1650;
+    filter.Q.value = .38;
     gain.gain.setValueAtTime(.0001, now);
-    gain.gain.exponentialRampToValueAtTime(cover ? .42 : .62, now + .025);
-    gain.gain.exponentialRampToValueAtTime(.2, now + .2);
-    gain.gain.exponentialRampToValueAtTime(.0001, now + (cover ? .58 : .48));
+    gain.gain.exponentialRampToValueAtTime(cover ? .27 : .34, now + .028);
+    gain.gain.exponentialRampToValueAtTime(.11, now + .17);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + (cover ? .5 : .42));
     source.connect(filter);
     if (typeof context.createStereoPanner === "function") {
       const pan = context.createStereoPanner();
@@ -168,19 +168,41 @@
       gain.connect(context.pageTurnOutput);
     }
     source.start(now);
-    source.stop(now + .62);
+    source.stop(now + .52);
+  };
 
-    const landing = context.createOscillator();
-    const landingGain = context.createGain();
-    landing.type = "sine";
-    landing.frequency.setValueAtTime(cover ? 92 : 128, now + .3);
-    landingGain.gain.setValueAtTime(.0001, now + .29);
-    landingGain.gain.exponentialRampToValueAtTime(cover ? .13 : .09, now + .315);
-    landingGain.gain.exponentialRampToValueAtTime(.0001, now + .43);
-    landing.connect(landingGain);
-    landingGain.connect(context.pageTurnOutput);
-    landing.start(now + .29);
-    landing.stop(now + .45);
+  const playStampSound = (delay = 0) => {
+    const context = ensurePageAudio();
+    if (!context) return;
+    const when = context.currentTime + delay;
+    const thump = context.createOscillator();
+    const thumpGain = context.createGain();
+    thump.type = "triangle";
+    thump.frequency.setValueAtTime(112, when);
+    thump.frequency.exponentialRampToValueAtTime(76, when + .09);
+    thumpGain.gain.setValueAtTime(.0001, when);
+    thumpGain.gain.exponentialRampToValueAtTime(.055, when + .008);
+    thumpGain.gain.exponentialRampToValueAtTime(.0001, when + .105);
+    thump.connect(thumpGain);
+    thumpGain.connect(context.pageTurnOutput);
+    thump.start(when);
+    thump.stop(when + .12);
+
+    const contact = context.createBufferSource();
+    const contactFilter = context.createBiquadFilter();
+    const contactGain = context.createGain();
+    contact.buffer = pageNoise;
+    contact.playbackRate.value = 1.8;
+    contactFilter.type = "lowpass";
+    contactFilter.frequency.value = 520;
+    contactGain.gain.setValueAtTime(.0001, when);
+    contactGain.gain.exponentialRampToValueAtTime(.075, when + .006);
+    contactGain.gain.exponentialRampToValueAtTime(.0001, when + .075);
+    contact.connect(contactFilter);
+    contactFilter.connect(contactGain);
+    contactGain.connect(context.pageTurnOutput);
+    contact.start(when);
+    contact.stop(when + .09);
   };
 
   const flagMarkup = code => {
@@ -269,7 +291,10 @@
     const stamps = visiblePages.flatMap(page => [...page.querySelectorAll("[data-stamp]")]);
     stamps.forEach(stamp => stamp.classList.remove("is-stamped"));
     void els.spread.offsetWidth;
-    stamps.forEach(stamp => stamp.classList.add("is-stamped"));
+    stamps.forEach((stamp, index) => {
+      stamp.classList.add("is-stamped");
+      if (opened) playStampSound(.09 + index * .11);
+    });
     els.replay.disabled = stamps.length === 0;
   };
 
