@@ -14,7 +14,7 @@ body {
   background:
     radial-gradient(circle at 10% 0%, rgba(73,214,209,.1), transparent 30rem),
     linear-gradient(145deg, rgba(3,12,22,.48), rgba(5,15,26,.68)),
-    url("./background-games-v2.webp") center / cover fixed no-repeat;
+    url("./background-games-v3.webp") center / cover fixed no-repeat;
   font-family: Inter, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 a { color: inherit; }
