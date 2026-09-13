@@ -33,6 +33,8 @@
   let turning = false;
   let toastTimer = 0;
   let pointerStartX = null;
+  let audioContext = null;
+  let pageNoise = null;
 
   const escapeHtml = value => String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -106,6 +108,81 @@
     return result;
   };
 
+  const ensurePageAudio = () => {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+      const master = audioContext.createGain();
+      const limiter = audioContext.createDynamicsCompressor();
+      master.gain.value = .9;
+      limiter.threshold.value = -8;
+      limiter.knee.value = 12;
+      limiter.ratio.value = 5;
+      limiter.attack.value = .003;
+      limiter.release.value = .16;
+      master.connect(limiter);
+      limiter.connect(audioContext.destination);
+      audioContext.pageTurnOutput = master;
+    }
+    if (audioContext.state === "suspended") audioContext.resume().catch(() => {});
+    if (!pageNoise) {
+      pageNoise = audioContext.createBuffer(1, Math.ceil(audioContext.sampleRate * .62), audioContext.sampleRate);
+      const channel = pageNoise.getChannelData(0);
+      let last = 0;
+      for (let index = 0; index < channel.length; index += 1) {
+        const white = Math.random() * 2 - 1;
+        last = last * .62 + white * .38;
+        channel[index] = last;
+      }
+    }
+    return audioContext;
+  };
+
+  const playPageTurn = (direction = 1, cover = false) => {
+    const context = ensurePageAudio();
+    if (!context) return;
+    const now = context.currentTime;
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = pageNoise;
+    source.playbackRate.value = cover ? .76 : .94 + Math.random() * .12;
+    filter.type = "bandpass";
+    filter.frequency.value = cover ? 720 : 1180;
+    filter.Q.value = .55;
+    gain.gain.setValueAtTime(.0001, now);
+    gain.gain.exponentialRampToValueAtTime(cover ? .42 : .62, now + .025);
+    gain.gain.exponentialRampToValueAtTime(.2, now + .2);
+    gain.gain.exponentialRampToValueAtTime(.0001, now + (cover ? .58 : .48));
+    source.connect(filter);
+    if (typeof context.createStereoPanner === "function") {
+      const pan = context.createStereoPanner();
+      pan.pan.setValueAtTime(direction > 0 ? .65 : -.65, now);
+      pan.pan.linearRampToValueAtTime(direction > 0 ? -.5 : .5, now + .45);
+      filter.connect(gain);
+      gain.connect(pan);
+      pan.connect(context.pageTurnOutput);
+    } else {
+      filter.connect(gain);
+      gain.connect(context.pageTurnOutput);
+    }
+    source.start(now);
+    source.stop(now + .62);
+
+    const landing = context.createOscillator();
+    const landingGain = context.createGain();
+    landing.type = "sine";
+    landing.frequency.setValueAtTime(cover ? 92 : 128, now + .3);
+    landingGain.gain.setValueAtTime(.0001, now + .29);
+    landingGain.gain.exponentialRampToValueAtTime(cover ? .13 : .09, now + .315);
+    landingGain.gain.exponentialRampToValueAtTime(.0001, now + .43);
+    landing.connect(landingGain);
+    landingGain.connect(context.pageTurnOutput);
+    landing.start(now + .29);
+    landing.stop(now + .45);
+  };
+
   const flagMarkup = code => {
     const safeCode = /^[A-Z]{2}$/.test(code) ? code : "--";
     if (safeCode === "--") return `<span class="flag-mark">--</span>`;
@@ -120,25 +197,14 @@
 
   const countryStamp = (country, number, index) => {
     const code = String(country.code || "").toUpperCase();
-    return `<article class="visa-stamp country-stamp" data-stamp style="${stampStyle(index)}">
+    const shapes = ["stamp-oblong", "stamp-oval", "stamp-ticket", "stamp-oblong"];
+    return `<article class="visa-stamp country-stamp ${shapes[index % shapes.length]}" data-stamp style="${stampStyle(index)}">
       <div class="stamp-inner">
-        <div class="stamp-top">${flagMarkup(code)}<span>ENTRY PERMIT</span></div>
-        <h3>${escapeHtml(country.name)}</h3>
-        <p>${escapeHtml(code)} · COUNTRY / REGION</p>
-        <div class="stamp-meta"><span>TRAVEL IN TIME</span><span>NO. ${String(number).padStart(3, "0")}</span></div>
-      </div>
-    </article>`;
-  };
-
-  const cityStamp = (city, number, index) => {
-    const code = String(city.countryCode || "").toUpperCase();
-    const region = [city.region, city.countryName || getCountryName(code)].filter(Boolean).join(" · ");
-    return `<article class="visa-stamp city-stamp" data-stamp style="${stampStyle(index + 2)}">
-      <div class="stamp-inner">
-        <div class="stamp-top">${flagMarkup(code)}<span>ARRIVAL</span></div>
-        <h3>${escapeHtml(city.name || "未命名城市")}</h3>
-        <p>${escapeHtml(region || code || "TRAVEL DESTINATION")}</p>
-        <div class="stamp-meta"><span>PERSONALLY VISITED</span><span>NO. ${String(number).padStart(3, "0")}</span></div>
+        <div class="stamp-top"><span>IMMIGRATION</span>${flagMarkup(code)}<span>ADMITTED</span></div>
+        <div class="stamp-country"><b>${escapeHtml(code)}</b><h3>${escapeHtml(country.name)}</h3></div>
+        <div class="stamp-route"><i aria-hidden="true">✦</i><span>ENTRY</span><i aria-hidden="true">✦</i></div>
+        <div class="stamp-meta"><span>TRAVEL IN TIME</span><span>ENTRY NO. ${String(number).padStart(4, "0")}</span></div>
+        <small class="stamp-micro">VALID FOR ONE RECORDED JOURNEY · BORDER CONTROL</small>
       </div>
     </article>`;
   };
@@ -147,48 +213,51 @@
     <div><span>${escapeHtml(eyebrow)}</span><h2>${escapeHtml(title)}</h2></div><small>${escapeHtml(meta)}</small>
   </header>`;
 
-  const makeSummaryPage = (countryCount, cityCount) => ({
-    chapter: "旅程总览",
-    html: `<div class="summary-page">
-      ${pageHeading("TRAVEL DOCUMENT", "旅程总览", "TRAVEL IN TIME")}
-      <div class="summary-seal" data-stamp style="--delay:100ms">✦</div>
-      <div class="summary-copy"><p>这本护照由已经记录的真实足迹自动装订。每一个印章，都代表一次亲自抵达。</p></div>
-      <div class="summary-stats">
-        <div class="summary-stat"><strong>${countryCount}</strong><span>国家 / 地区签章</span></div>
-        <div class="summary-stat"><strong>${cityCount}</strong><span>城市入境签章</span></div>
+  const makeDocumentPage = countryCount => ({
+    chapter: "旅行证件",
+    html: `<div class="document-page">
+      ${pageHeading("TRAVEL DOCUMENT", "旅行护照", "TRAVEL IN TIME")}
+      <div class="document-motif" aria-hidden="true">
+        <svg viewBox="0 0 360 170">
+          <path class="motif-route" d="M28 123C89 34 202 38 323 104" />
+          <path class="motif-dash" d="M35 126C98 53 205 54 317 106" />
+          <g class="motif-compass" transform="translate(176 84)">
+            <path d="M0-58 11-12 0 0-11-12Z" /><path d="M0 58 11 12 0 0-11 12Z" />
+            <path d="M-58 0-12-11 0 0-12 11Z" /><path d="M58 0 12-11 0 0 12 11Z" />
+            <circle r="8" />
+          </g>
+          <path class="motif-plane" d="m315 91 27-9-10 14 10 8-27-4-13 10 4-13-4-13Z" />
+        </svg>
       </div>
-      <div class="summary-note">无需额外填写资料；游客足迹读取自当前浏览器，登录状态下读取已同步的账号足迹。</div>
+      <div class="document-fields">
+        <div><span>TYPE / 类型</span><strong>P</strong></div>
+        <div><span>CODE / 代码</span><strong>TIT</strong></div>
+        <div><span>ENTRY STAMPS / 入境签章</span><strong>${countryCount}</strong></div>
+        <div><span>STATUS / 状态</span><strong>VALID</strong></div>
+      </div>
     </div>`
   });
 
-  const makeStampPage = (items, type, pageNumber, startNumber) => {
-    const countryPage = type === "country";
-    const title = countryPage ? "国家与地区签章" : "城市入境记录";
-    const eyebrow = countryPage ? "COUNTRY VISAS" : "CITY ARRIVALS";
-    const stamps = items.map((item, index) => countryPage
-      ? countryStamp(item, startNumber + index, index)
-      : cityStamp(item, startNumber + index, index)).join("");
+  const makeStampPage = (items, pageNumber, startNumber) => {
+    const stamps = items.map((item, index) => countryStamp(item, startNumber + index, index)).join("");
     return {
-      chapter: title,
-      html: `${pageHeading(eyebrow, title, `VISA PAGE ${String(pageNumber).padStart(2, "0")}`)}<div class="stamp-grid">${stamps}</div>`
+      chapter: "入境签章",
+      html: `${pageHeading("VISAS", "签证", `VISA PAGE ${String(pageNumber).padStart(2, "0")}`)}<div class="stamp-grid">${stamps}</div>`
     };
   };
 
-  const makeBlankPage = (empty = false) => ({
-    chapter: empty ? "等待下一次抵达" : "旅程未完待续",
-    html: `<div class="blank-page"><div><span>✦</span><h2>${empty ? "护照还没有签章" : "下一页，留给新的旅程"}</h2>
-      <p>${empty ? "先在旅行地图中记录去过的国家和城市，它们会自动出现在这里。" : "继续在地图中记录足迹，这一页会被新的入境章慢慢填满。"}</p>
-      <a href="${accountMode ? "./index.html?mode=account" : "./index.html"}">返回地图记录足迹</a></div></div>`
+  const makeBlankPage = pageNumber => ({
+    chapter: "入境签章",
+    html: `${pageHeading("VISAS", "签证", `VISA PAGE ${String(pageNumber).padStart(2, "0")}`)}
+      <div class="blank-page"><div><span>✦</span><small>NO ENTRY STAMPS</small></div></div>`
   });
 
   const buildPages = () => {
     const countries = getCountries();
-    const cities = [...state.cities];
-    pages = [makeSummaryPage(countries.length, cities.length)];
-    chunks(countries, 6).forEach((group, index) => pages.push(makeStampPage(group, "country", pages.length + 1, index * 6 + 1)));
-    chunks(cities, 6).forEach((group, index) => pages.push(makeStampPage(group, "city", pages.length + 1, index * 6 + 1)));
-    if (!countries.length && !cities.length) pages.push(makeBlankPage(true));
-    if (pages.length % 2) pages.push(makeBlankPage(false));
+    pages = [makeDocumentPage(countries.length)];
+    chunks(countries, 4).forEach((group, index) => pages.push(makeStampPage(group, index + 2, index * 4 + 1)));
+    if (pages.length === 1) pages.push(makeBlankPage(2));
+    if (pages.length % 2) pages.push(makeBlankPage(pages.length + 1));
     pageIndex = 0;
     renderSpread(false);
   };
@@ -205,8 +274,8 @@
   };
 
   function renderSpread(animate = true) {
-    const left = pages[pageIndex] || makeBlankPage(false);
-    const right = pages[pageIndex + 1] || makeBlankPage(false);
+    const left = pages[pageIndex] || makeBlankPage(pageIndex + 1);
+    const right = pages[pageIndex + 1] || makeBlankPage(pageIndex + 2);
     els.left.innerHTML = left.html;
     els.right.innerHTML = right.html;
     const step = pageStep();
@@ -226,6 +295,7 @@
     const target = pageIndex + direction * step;
     if (target < 0 || target >= pages.length) return;
     turning = true;
+    playPageTurn(direction);
     const source = direction > 0 ? (singlePageQuery.matches ? els.left : els.right) : els.left;
     els.sheet.innerHTML = source.innerHTML;
     els.sheet.className = `turn-sheet ${direction > 0 ? "turn-next" : "turn-prev"}`;
@@ -244,15 +314,16 @@
   const openBook = () => {
     if (opened) return;
     opened = true;
+    playPageTurn(1, true);
     els.book.classList.add("opened");
     els.open.setAttribute("aria-expanded", "true");
     setTimeout(animateStamps, 900);
-    showToast("旅行护照已打开");
   };
 
   const closeBook = () => {
     if (!opened || turning) return;
     opened = false;
+    playPageTurn(-1, true);
     pageIndex = 0;
     els.book.classList.remove("opened");
     els.open.setAttribute("aria-expanded", "false");

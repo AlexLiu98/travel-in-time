@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#14243a" />
-    <meta name="description" content="Travel in Time 旅行护照：把记录过的国家与城市装订成一本可以翻阅的电子护照。" />
+    <meta name="description" content="Travel in Time 旅行护照：把到访过的国家与地区制成可以翻阅的电子护照入境章。" />
     <title>旅行护照 · Travel in Time</title>
     <link rel="preload" as="image" href="./passport-airport-v1.webp" />
-    <link rel="stylesheet" href="./passport.css?v=1" />
+    <link rel="stylesheet" href="./passport.css?v=2" />
   </head>
   <body>
     <div class="passport-shell">
@@ -44,7 +44,7 @@
           <nav class="passport-controls" id="passportControls" aria-label="护照翻页控制">
             <button id="prevPage" type="button"><span aria-hidden="true">←</span><b>上一页</b></button>
             <div class="page-status">
-              <strong id="chapterLabel">旅程总览</strong>
+              <strong id="chapterLabel">入境签章</strong>
               <span id="pageIndicator">01–02 / 02</span>
             </div>
             <button class="stamp-again" id="replayStamps" type="button"><span aria-hidden="true">◎</span><b>重新盖章</b></button>
@@ -56,6 +56,6 @@
     </div>
 
     <div class="passport-toast" id="passportToast" role="status" aria-live="polite"></div>
-    <script src="./passport.js?v=1"></script>
+    <script src="./passport.js?v=2"></script>
   </body>
 </html>

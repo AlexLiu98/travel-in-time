@@ -123,39 +123,53 @@ button { font: inherit; }
 .page-heading span { display: block; color: #7c3042; font-size: .58rem; font-weight: 900; letter-spacing: .19em; }
 .page-heading h2 { margin: 4px 0 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 1.25rem; letter-spacing: .05em; }
 .page-heading small { color: #697b85; font-family: Georgia, serif; font-size: .68rem; letter-spacing: .09em; white-space: nowrap; }
-.summary-page { display: grid; align-content: start; }
-.summary-seal { width: 106px; height: 106px; display: grid; place-items: center; margin: 12px auto 26px; border: 2px solid #7c3042; border-radius: 50%; color: #7c3042; box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px rgba(124,48,66,.48); font-size: 2rem; opacity: .08; transform: scale(1.55) rotate(-7deg); }
-.summary-seal.is-stamped { animation: summary-stamp-in .5s cubic-bezier(.16,.82,.24,1.16) var(--delay, 0ms) both; }
-.summary-copy { text-align: center; }
-.summary-copy p { max-width: 380px; margin: 0 auto; color: #566b78; font-family: Georgia, "Noto Serif SC", serif; font-size: .9rem; line-height: 1.85; }
-.summary-stats { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; }
-.summary-stat { padding: 15px; border: 1px solid rgba(48,70,82,.16); border-radius: 10px; background: rgba(255,255,255,.24); }
-.summary-stat strong { display: block; color: #6e2037; font-family: Georgia, serif; font-size: 1.8rem; }
-.summary-stat span { display: block; margin-top: 3px; color: #61727c; font-size: .65rem; }
-.summary-note { position: relative; z-index: 1; margin-top: 14px; padding: 12px 14px; border-left: 3px solid #b7924d; color: #596c77; background: rgba(183,146,77,.08); font-size: .68rem; line-height: 1.65; }
+.document-page { position: relative; z-index: 1; display: grid; align-content: start; }
+.document-motif { height: 202px; display: grid; place-items: center; margin: 1px 0 14px; color: #a77d37; }
+.document-motif svg { width: min(350px, 92%); overflow: visible; filter: drop-shadow(0 3px 2px rgba(110,77,30,.12)); }
+.document-motif path, .document-motif circle { fill: none; stroke: currentColor; stroke-width: 2; vector-effect: non-scaling-stroke; }
+.document-motif .motif-route { stroke-width: 1; opacity: .34; }
+.document-motif .motif-dash { stroke-dasharray: 5 8; opacity: .72; }
+.document-motif .motif-compass path { fill: rgba(167,125,55,.13); }
+.document-motif .motif-compass path:first-child, .document-motif .motif-compass path:nth-child(4) { fill: currentColor; }
+.document-motif .motif-compass circle { fill: var(--paper); stroke-width: 1.5; }
+.document-motif .motif-plane { fill: currentColor; stroke-width: 1; }
+.document-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; padding: 0 16px; }
+.document-fields div { min-height: 53px; padding: 9px 3px 8px; border-bottom: 1px solid rgba(45,65,78,.23); }
+.document-fields span { display: block; color: #7a858b; font-size: .54rem; font-weight: 800; letter-spacing: .11em; }
+.document-fields strong { display: block; margin-top: 5px; color: #273c48; font-family: ui-monospace, monospace; font-size: .9rem; letter-spacing: .08em; }
 
-.stamp-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 18px 14px; }
+.stamp-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
 .visa-stamp {
-  --stamp-ink: #745064; --tilt: 0deg; min-height: 116px; display: grid; place-items: center; padding: 12px;
-  color: var(--stamp-ink); border: 2px solid currentColor; opacity: .08; transform: scale(1.55) rotate(var(--tilt));
+  --stamp-ink: #745064; --tilt: 0deg; position: relative; min-height: 158px; display: grid; place-items: center; padding: 19px 18px;
+  color: var(--stamp-ink); border: 0; opacity: .08; transform: scale(1.55) rotate(var(--tilt));
   filter: blur(1.5px); mix-blend-mode: multiply;
 }
 .visa-stamp.is-stamped { animation: stamp-in .5s cubic-bezier(.16,.82,.24,1.16) var(--delay, 0ms) both; }
-.country-stamp { border-radius: 50%; aspect-ratio: 1.45; }
-.city-stamp { min-height: 106px; border-radius: 8px 16px 8px 16px; border-style: double; border-width: 4px; }
-.stamp-inner { width: 100%; text-align: center; }
-.stamp-top { display: flex; justify-content: center; align-items: center; gap: 7px; font-size: .51rem; font-weight: 900; letter-spacing: .13em; }
-.flag-mark { position: relative; width: 24px; height: 17px; overflow: hidden; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 2px; font-size: .42rem; font-weight: 900; }
+.country-stamp::before, .country-stamp::after { content: ""; position: absolute; pointer-events: none; }
+.country-stamp::before { inset: 1px; border: 3px double currentColor; border-radius: 11px 24px 11px 24px; box-shadow: inset 0 0 0 5px rgba(244,236,217,.62), inset 0 0 0 6px currentColor; }
+.country-stamp::after { inset: 10px; border: 1px dashed currentColor; border-radius: 7px 18px 7px 18px; opacity: .75; }
+.country-stamp.stamp-oval::before, .country-stamp.stamp-oval::after { border-radius: 50%; }
+.country-stamp.stamp-ticket { clip-path: polygon(7% 0,93% 0,100% 13%,100% 87%,93% 100%,7% 100%,0 87%,0 13%); }
+.country-stamp.stamp-ticket::before { border-radius: 3px; }
+.country-stamp.stamp-ticket::after { border-radius: 2px; }
+.stamp-inner { position: relative; z-index: 1; width: 100%; text-align: center; }
+.stamp-top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; font-size: .48rem; font-weight: 900; letter-spacing: .13em; }
+.stamp-top span:first-child { text-align: right; }
+.stamp-top span:last-child { text-align: left; }
+.flag-mark { position: relative; width: 29px; height: 20px; overflow: hidden; display: grid; place-items: center; border: 1px solid currentColor; border-radius: 2px; font-size: .42rem; font-weight: 900; }
 .flag-mark svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.visa-stamp h3 { margin: 7px 0 2px; font-family: Georgia, "Noto Serif SC", serif; font-size: .98rem; letter-spacing: .04em; }
-.visa-stamp p { margin: 0; font-size: .59rem; font-weight: 750; letter-spacing: .05em; }
-.stamp-meta { display: flex; justify-content: center; gap: 8px; margin-top: 7px; padding-top: 5px; border-top: 1px dashed currentColor; font-family: ui-monospace, monospace; font-size: .48rem; letter-spacing: .07em; }
+.stamp-country { display: flex; align-items: baseline; justify-content: center; gap: 8px; margin: 10px 0 6px; }
+.stamp-country b { padding: 2px 5px; border: 1px solid currentColor; font-family: ui-monospace, monospace; font-size: .64rem; letter-spacing: .08em; }
+.visa-stamp h3 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 1.04rem; letter-spacing: .04em; }
+.stamp-route { display: flex; justify-content: center; align-items: center; gap: 8px; font-family: ui-monospace, monospace; font-size: .57rem; font-weight: 900; letter-spacing: .2em; }
+.stamp-route::before, .stamp-route::after { content: ""; width: 35px; height: 1px; background: currentColor; opacity: .7; }
+.stamp-route i { font-size: .45rem; font-style: normal; }
+.stamp-meta { display: flex; justify-content: center; gap: 9px; margin-top: 8px; padding-top: 6px; border-top: 1px solid currentColor; font-family: ui-monospace, monospace; font-size: .46rem; letter-spacing: .07em; }
+.stamp-micro { display: block; margin-top: 5px; font-family: ui-monospace, monospace; font-size: .35rem; font-weight: 800; letter-spacing: .05em; opacity: .68; }
 .blank-page { position: relative; z-index: 1; height: 100%; display: grid; place-items: center; text-align: center; }
 .blank-page div { max-width: 320px; }
 .blank-page span { display: block; color: rgba(124,48,66,.52); font-size: 2.4rem; }
-.blank-page h2 { margin: 14px 0 8px; font-family: Georgia, "Noto Serif SC", serif; font-size: 1.2rem; }
-.blank-page p { margin: 0; color: #61727c; font-size: .75rem; line-height: 1.75; }
-.blank-page a { display: inline-flex; margin-top: 18px; padding: 9px 14px; border: 1px solid rgba(124,48,66,.38); border-radius: 8px; color: #6e2037; text-decoration: none; font-size: .7rem; font-weight: 800; }
+.blank-page small { display: block; margin-top: 10px; color: rgba(65,82,91,.5); font-family: ui-monospace, monospace; font-size: .53rem; letter-spacing: .16em; }
 
 .turn-sheet { position: absolute; z-index: 8; top: 0; bottom: 0; width: 50%; display: none; overflow: hidden; color: var(--ink); background: var(--paper); backface-visibility: hidden; box-shadow: 0 0 36px rgba(48,30,14,.2); }
 .turn-sheet.turn-next { display: block; left: 50%; transform-origin: left center; animation: turn-next .76s cubic-bezier(.28,.66,.22,1) forwards; }
@@ -182,7 +196,6 @@ button { font: inherit; }
 .passport-toast.show { opacity: 1; translate: -50% 0; }
 
 @keyframes stamp-in { 0% { opacity: .05; transform: scale(1.6) rotate(var(--tilt)); filter: blur(2px); } 55% { opacity: .92; transform: scale(.92) rotate(var(--tilt)); filter: blur(0); } 76% { transform: scale(1.04) rotate(var(--tilt)); } 100% { opacity: .82; transform: scale(1) rotate(var(--tilt)); filter: blur(0); } }
-@keyframes summary-stamp-in { 0% { opacity: .05; transform: scale(1.6) rotate(-7deg); filter: blur(2px); } 58% { opacity: .92; transform: scale(.92) rotate(-7deg); filter: blur(0); } 100% { opacity: .82; transform: scale(1) rotate(-7deg); } }
 @keyframes turn-next { 0% { transform: perspective(1800px) rotateY(0); } 100% { transform: perspective(1800px) rotateY(-180deg); } }
 @keyframes turn-prev { 0% { transform: perspective(1800px) rotateY(0); } 100% { transform: perspective(1800px) rotateY(180deg); } }
 
@@ -192,7 +205,7 @@ button { font: inherit; }
   .passport-page { padding: 28px 30px 34px; }
   .page-heading { margin-bottom: 18px; }
   .stamp-grid { gap: 12px; }
-  .visa-stamp { min-height: 96px; }
+  .visa-stamp { min-height: 130px; padding: 15px; }
   .cover-emblem { width: 102px; height: 102px; margin: 35px 0 26px; }
 }
 
@@ -222,7 +235,8 @@ button { font: inherit; }
   .passport-controls button { min-height: 38px; padding: 0 10px; }
   .passport-controls .close-book b { display: none; }
   .stamp-grid { gap: 14px 11px; }
-  .visa-stamp { min-height: 108px; }
+  .visa-stamp { min-height: 150px; }
+  .document-motif { height: 180px; }
 }
 
 @media (max-width: 430px) {
@@ -231,10 +245,13 @@ button { font: inherit; }
   .page-heading h2 { font-size: 1.08rem; }
   .page-heading small { display: none; }
   .stamp-grid { gap: 10px 8px; }
-  .visa-stamp { min-height: 94px; padding: 8px; }
+  .visa-stamp { min-height: 132px; padding: 13px 9px; }
   .visa-stamp h3 { font-size: .82rem; }
-  .visa-stamp p { font-size: .51rem; }
   .stamp-meta { gap: 4px; font-size: .42rem; }
+  .stamp-top { gap: 4px; font-size: .4rem; letter-spacing: .07em; }
+  .flag-mark { width: 24px; height: 17px; }
+  .stamp-micro { display: none; }
+  .document-motif { height: 155px; }
   .passport-controls .stamp-again b { display: none; }
   .passport-cover { padding: 32px 24px; }
   .cover-emblem { width: 108px; height: 108px; margin: 54px 0 34px; }
