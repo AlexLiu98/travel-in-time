@@ -30,12 +30,13 @@
     resultEyebrow: document.getElementById("resultEyebrow"), resultTitle: document.getElementById("resultTitle"),
     resultText: document.getElementById("resultText"), resultTime: document.getElementById("resultTime"),
     again: document.getElementById("againBtn"), closeResult: document.getElementById("closeResultBtn"),
-    sound: document.getElementById("soundToggle")
+    sound: document.getElementById("soundToggle"), gameHub: document.getElementById("gameHubLink")
   };
 
   const backHref = accountMode ? "./index.html?mode=account" : "./index.html";
   [document.getElementById("backLink"), document.getElementById("brandLink")]
     .forEach(link => { if (link) link.href = backHref; });
+  if (els.gameHub) els.gameHub.href = accountMode ? "./games.html?v=2&mode=account" : "./games.html?v=2";
 
   let levelKey = "easy";
   let board = [];
