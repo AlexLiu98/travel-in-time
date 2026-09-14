@@ -35,6 +35,9 @@ button { color: inherit; }
 .header-title { margin-left: auto; display: flex; align-items: baseline; gap: 8px; }
 .header-title span { color: var(--gold); font-size: .68rem; letter-spacing: .14em; }
 .header-title strong { font-size: .92rem; }
+.other-game { min-height: 36px; display: inline-flex; align-items: center; gap: 5px; padding: 0 11px; border: 1px solid rgba(214,170,80,.3); border-radius: 10px; color: #ead49f; text-decoration: none; background: rgba(131,91,7,.1); font-size: .67rem; font-weight: 750; white-space: nowrap; }
+.other-game:hover { border-color: rgba(214,170,80,.62); color: #fff2c4; background: rgba(131,91,7,.18); }
+.other-game span { color: var(--gold-bright); }
 .sound-toggle { min-height: 38px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid rgba(214,170,80,.32); border-radius: 11px; color: #ead49f; background: linear-gradient(145deg, rgba(88,60,18,.2), rgba(9,25,40,.82)); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); cursor: pointer; }
 .sound-toggle span { color: var(--gold-bright); font-size: 1rem; line-height: 1; }
 .sound-toggle b { font-size: .68rem; font-weight: 700; }
@@ -263,6 +266,8 @@ dialog > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: .78rem; li
   100% { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(.15); }
 }
 @media (max-width: 760px) {
+  .other-game b { display: none; }
+  .other-game { width: 39px; min-width: 39px; padding: 0; justify-content: center; font-size: .9rem; }
   .game-intro { grid-template-columns: 1fr; gap: 18px; align-items: start; }
   .best-board { width: 100%; }
   .play-panel { grid-template-columns: 1fr; }
@@ -278,7 +283,8 @@ dialog > p:not(.eyebrow) { margin: 0; color: var(--muted); font-size: .78rem; li
   .game-shell { width: min(100% - 20px, 1180px); }
   .game-header { height: 67px; }
   .game-brand strong { font-size: .82rem; }
-  .game-brand small, .header-title span { display: none; }
+  .game-brand small, .header-title { display: none; }
+  .other-game { margin-left: auto; }
   .header-title strong { font-size: .78rem; }
   .sound-toggle { width: 39px; min-width: 39px; padding: 0; justify-content: center; }
   .sound-toggle b { display: none; }
