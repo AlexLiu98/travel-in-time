@@ -8,6 +8,6 @@
   });
   const flags = document.getElementById("flagsGame");
   const train = document.getElementById("trainGame");
-  if (flags) flags.href = accountMode ? "./flags.html?v=13&mode=account" : "./flags.html?v=13";
+  if (flags) flags.href = accountMode ? "./flags.html?v=14&mode=account" : "./flags.html?v=14";
   if (train) train.href = accountMode ? "./train.html?v=3&mode=account" : "./train.html?v=3";
 })();
